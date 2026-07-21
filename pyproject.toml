@@ -5,6 +5,9 @@ description = "A multi-agent LLM assistant for Unity game development"
 requires-python = ">=3.12"
 dependencies = []
 
+[project.optional-dependencies]
+dev = ["ruff", "pytest"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
