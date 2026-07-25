@@ -1,4 +1,4 @@
-from multi_agent_unity.client import build_request_payload, send_request, print_response_to_terminal
+from multi_agent_unity.client import build_request_payload, print_response_to_terminal, send_request
 
 if __name__ == "__main__":
     headers, body = build_request_payload("Hello, Claude!")
