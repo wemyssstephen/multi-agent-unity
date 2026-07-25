@@ -3,7 +3,7 @@ name = "multi-agent-unity"
 version = "0.1.0"
 description = "A multi-agent LLM assistant for Unity game development"
 requires-python = ">=3.12"
-dependencies = [requests]
+dependencies = ["requests", "python-dotenv"]
 
 [project.optional-dependencies]
 dev = ["ruff", "pytest"]
