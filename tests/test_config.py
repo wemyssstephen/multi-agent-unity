@@ -1,4 +1,4 @@
-"""Smoke test for config: proves the api key is loaded correctly from the .env file."""
+"""Tests for config: proves the api key is loaded correctly from the .env file."""
 import pytest
 from multi_agent_unity.config import get_anthropic_api_key
 
