@@ -7,7 +7,7 @@ END_POINT = "https://api.anthropic.com/v1/messages"
 def build_request_payload(message: str, model: str = "claude-haiku-4-5-20251001") -> tuple[dict, dict]:
     """Builds the request payload for the Anthropic API."""
 
-    api_key = get_anthropic_api_key()
+    api_key = get_anthropic_api_key() # TODO: Consider fetching the API key as this is a dependency
     built_message = [{"role": "user", "content": message}]
 
     request_headers =   {
