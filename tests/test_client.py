@@ -8,14 +8,13 @@ RESPONSE =  {
 
 def test_build_request_payload(monkeypatch) -> None:
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_api_key")
-    message = "Hello, world!"
-    headers, body = build_request_payload(message)
+    messages = [{"role": "user", "content": "Hello, world!"}]
+    headers, body = build_request_payload(messages)
 
     assert "x-api-key" in headers
     assert headers["Content-Type"] == "application/json"
     assert body["model"] == "claude-haiku-4-5-20251001"
-    assert body["messages"][0]["role"] == "user"
-    assert body["messages"][0]["content"] == message
+    assert body["messages"] == messages
 
 def test_get_text() -> None:
     text = get_text(RESPONSE)

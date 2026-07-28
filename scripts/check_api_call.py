@@ -1,6 +1,7 @@
-from multi_agent_unity.client import build_request_payload, print_response_to_terminal, send_request
+from multi_agent_unity.agent import agent_loop
 
 if __name__ == "__main__":
-    headers, body = build_request_payload("Hello, Claude!")
-    response = send_request(headers, body)
-    print_response_to_terminal(response)
+    response = agent_loop("Give me a haiku about a silly cat.")
+    print(f"Agent Response:\n {response['text']}")
+    print(f"Total Input Tokens: {response['input_tokens']}")
+    print(f"Total Output Tokens: {response['output_tokens']}")
