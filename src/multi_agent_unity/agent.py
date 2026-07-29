@@ -1,38 +1,40 @@
 
-from multi_agent_unity.client import build_request_payload, get_stop_reason, get_text, get_usage, send_request
+import multi_agent_unity.client as client
 
 
-def agent_loop(task: str) -> dict:
-    """Main loop for an agent"""
+def agent_loop(task: str, tool_registry: dict, tool_definitions: list, sender=client.send_request) -> dict:
+    """Main loop for an agent""" # TODO: Tool registry and definitions are separate which is not good.
     messages = [{"role": "user", "content": task}]
 
     total_input_tokens = 0
     total_output_tokens = 0
 
     for _ in range(10): # temporary testing cap
-        headers, body = build_request_payload(messages)
-        response = send_request(headers, body)
-        stop = get_stop_reason(response)
+        headers, body = client.build_request_payload(messages, tools=tool_definitions)
+        response = sender(headers, body)
+        stop = client.get_stop_reason(response)
 
-        usage = get_usage(response)
+        usage = client.get_usage(response)
         total_input_tokens += usage["input_tokens"]
         total_output_tokens += usage["output_tokens"]
 
         if stop == "tool_use":
             messages.append({"role": "assistant", "content": response["content"]})
-            # TODO: Run tool and append the result to the user turn
+            tool_calls = client.get_tool_calls(response)
+            tool_results = client.get_tool_results(tool_calls, tool_registry)
+            messages.append({"role": "user", "content": tool_results})
             continue
 
         elif stop == "max_tokens":
             # TODO: Handle truncation and flag. For now just return what we've got.
             return {
-                    "text": get_text(response),
+                    "text": client.get_text(response),
                     "input_tokens": total_input_tokens,
                     "output_tokens": total_output_tokens
                     }
         else:
             return {
-                    "text": get_text(response),
+                    "text": client.get_text(response),
                     "input_tokens": total_input_tokens,
                     "output_tokens": total_output_tokens
                     }
