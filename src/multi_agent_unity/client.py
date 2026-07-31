@@ -54,6 +54,8 @@ def get_stop_reason(response: dict) -> str:
     """Extracts the stop reason from the Anthropic API response."""
     return response.get("stop_reason") or "end_turn"
 
+# TODO: Build tool call tests ASAP
+
 def get_tool_calls(response: dict) -> list[dict]:
     """Extracts the tool calls from the Anthropic API response."""
     tool_calls = []
