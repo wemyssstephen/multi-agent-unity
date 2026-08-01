@@ -37,9 +37,7 @@ def send_request(request_headers: dict, request_body: dict) -> dict:
 
 def get_text(response: dict) -> str:
     """Extracts the text from the Anthropic API response."""
-    text_blocks = [
-                    block["text"] for block in response["content"] if block["type"] == "text"
-                  ]
+    text_blocks = [block["text"] for block in response["content"] if block["type"] == "text"]
     return "\n".join(text_blocks)
 
 def get_usage(response: dict) -> dict:
