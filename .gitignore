@@ -33,3 +33,8 @@ Thumbs.db
 /unity/Assets/*
 !/unity/Assets/MultiAgentBridge/
 !/unity/Assets/MultiAgentBridge/**
+
+# Unity package manifest
+!/unity/Packages/
+/unity/Packages/*
+!/unity/Packages/manifest.json
