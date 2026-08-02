@@ -7,67 +7,100 @@ using UnityEditor;
 
 namespace MultiAgentBridge
 {
+    /// <summary>
+    /// HTTP entry point for the bridge. Listens on localhost:8080 on a background
+    /// thread, reads each request body, and hands it to <see cref="JobQueue"/> to run
+    /// on the main thread. Started automatically on load and after every domain reload via InitializeOnLoad.
+    /// </summary>
     [InitializeOnLoad]
-
     public static class HttpBridge
     {
+
+        private static readonly HttpListener listener = new();
+
         static HttpBridge()
         {
             Debug.Log("HttpBridge ctor ran.");
+
+            AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+            AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+
             // HttpListener running on a background thread
             var t = new Thread(() =>
             {
                 RunListener();
-            });            
+            })
+            {
+                IsBackground = true
+            };
             t.Start();
         }
 
         private static void RunListener()
         {
-            var listener = new HttpListener();
             listener.Prefixes.Add("http://localhost:8080/");
             listener.Start();
             Debug.Log("Listening for HTTP requests on http://localhost:8080/");
 
-            while (true)
+            try
             {
-                var context = listener.GetContext();
-                var response = context.Response;
-                var output = response.OutputStream;
-
-                // Handle the request and wait for a response
-                try
+                while (true)
                 {
-                    string jobId = MintId();
-                    string pollResult = null;
+                    var context = listener.GetContext();
+                    var response = context.Response;
+                    var output = response.OutputStream;
 
-                    TransportSkeleton.EnqueueJob(jobId, () =>
+                    // Read the request body
+                    string requestBody;
+                    using (var reader = new System.IO.StreamReader(context.Request.InputStream))
                     {
-                        new GameObject("BridgeProof");
-                        return "created BridgeProof";
-                    });
-
-                    while (pollResult == null)
-                    {
-                        pollResult = TransportSkeleton.PollJobResult(jobId);
-                        if (pollResult == null) Thread.Sleep(50); // Sleep for a short duration to avoid busy waiting
+                        requestBody = reader.ReadToEnd();
                     }
 
-                    byte[] buffer = Encoding.UTF8.GetBytes(pollResult);
-                    response.ContentLength64 = buffer.Length;
-                    output.Write(buffer, 0, buffer.Length);
-                }
+                    // Handle the request and wait for a response
+                    try
+                    {
+                        string jobId = MintId();
+                        string pollResult = null;
 
-                finally
-                {
-                    output.Close();
+                        JobQueue.EnqueueJob(jobId, () => ToolRouter.RunTool(requestBody));
+
+                        // TODO: No timeout. Add one once handlers can fail to return. Otherwise, a failed handler will block the listener forever.
+                        while (pollResult == null)
+                        {
+                            pollResult = JobQueue.PollJobResult(jobId);
+                            if (pollResult == null) { Thread.Sleep(50); }
+                            ; // Sleep for a short duration to avoid busy waiting
+                        }
+
+                        byte[] buffer = Encoding.UTF8.GetBytes(pollResult);
+                        response.ContentLength64 = buffer.Length;
+                        output.Write(buffer, 0, buffer.Length);
+                    }
+
+                    finally
+                    {
+                        output.Close();
+                    }
                 }
+            }
+            catch (HttpListenerException ex)
+            {
+                Debug.Log($"HttpListenerException: {ex.Message}");
             }
         }
 
         private static string MintId()
         {
             return Guid.NewGuid().ToString();
+        }
+
+        /// <summary>
+        /// Closes the listener before a domain reload so the port is released.
+        /// </summary>
+        private static void OnBeforeAssemblyReload()
+        {
+            listener.Close();
         }
     }
 }
