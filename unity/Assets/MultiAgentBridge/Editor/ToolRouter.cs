@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 
 namespace MultiAgentBridge
 {
@@ -53,7 +54,15 @@ namespace MultiAgentBridge
         {
             var p = args.ToObject<CreateGameObjectParams>();
             var go = new GameObject(p.ObjectName);
-            return $"created {p.ObjectName}";
+            try {
+            EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
+            }
+            catch (Exception e)
+            {
+                return $"Failed to save scene: {e.Message}";
+            }
+            var objectId = GlobalObjectId.GetGlobalObjectIdSlow(go).ToString(); // TODO: add guard against null return value, which can happen
+            return $"Created {go.name}. ID: {objectId}";
         }
 
         private static string CreateScript(JObject args)
@@ -84,7 +93,7 @@ namespace MultiAgentBridge
         private static void ForceUnityUpdate(string path)
         {
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-            EditorApplication.QueuePlayerLoopUpdate();
+            // EditorApplication.QueuePlayerLoopUpdate();
         }
     }
 }
