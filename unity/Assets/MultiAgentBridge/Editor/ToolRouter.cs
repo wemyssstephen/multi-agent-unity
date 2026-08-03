@@ -1,9 +1,11 @@
 
 using System;
+using System.IO;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEditor;
 
 namespace MultiAgentBridge
 {
@@ -18,6 +20,7 @@ namespace MultiAgentBridge
         static ToolRouter()
         {
             toolHandlers["create_gameobject"] = CreateGameObject;
+            toolHandlers["create_script"] = CreateScript;
         }
 
         /// <summary>
@@ -42,6 +45,7 @@ namespace MultiAgentBridge
             {
                 return $"Unknown tool name: {request.Name}";
             }
+            
             return handler(request.Args);
         }
 
@@ -50,6 +54,37 @@ namespace MultiAgentBridge
             var p = args.ToObject<CreateGameObjectParams>();
             var go = new GameObject(p.ObjectName);
             return $"created {p.ObjectName}";
+        }
+
+        private static string CreateScript(JObject args)
+        {
+            var p = args.ToObject<CreateScriptParams>();
+            var path = $"{p.TargetPath}/{p.ScriptName}.cs";
+            var assetsFolderPath = Application.dataPath.Replace('\\', '/') + "/";
+            var filePath = Path.GetFullPath(path).Replace('\\', '/');
+
+            if (!filePath.StartsWith(assetsFolderPath))
+            {
+                return $"Target path must be inside the Assets folder: {p.TargetPath}";
+            }
+
+            try
+            {
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllText(path, p.ScriptContent);
+            }
+            catch (Exception e)
+            {
+                return $"Failed to create script: {e.Message}";
+            }
+            ForceUnityUpdate(path);
+            return $"Created {path}";
+        }
+
+        private static void ForceUnityUpdate(string path)
+        {
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            EditorApplication.QueuePlayerLoopUpdate();
         }
     }
 }
