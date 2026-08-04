@@ -22,6 +22,7 @@ namespace MultiAgentBridge
             toolHandlers["create_gameobject"] = CreateGameObject;
             toolHandlers["create_script"] = CreateScript;
             toolHandlers["add_component"] = AddComponent;
+            toolHandlers["set_property"] = SetProperty;
         }
 
         /// <summary>
@@ -110,6 +111,47 @@ namespace MultiAgentBridge
             return $"Added component {p.ComponentType} to GameObject {go.name}";
         }
 
+        private static string SetProperty(JObject args)
+        {
+            var p = args.ToObject<SetPropertyParams>();
+            if (!TryResolveGameObject(p.GameObjectId, out var go, out var error))
+            {
+                return error;
+            }
+
+            try
+            {
+                var type = FindComponentType(p.ComponentType);
+                if (type == null)
+                {
+                    return $"Failed to find component type: {p.ComponentType}";
+                }
+
+                var component = go.GetComponent(type);
+                if (component == null)
+                {
+                    return $"GameObject {go.name} does not have a component of type {p.ComponentType}. Consider that it may have a different internal name.";
+                }
+
+                var so = new SerializedObject(component);
+                var property = so.FindProperty(p.PropertyPath);
+                if (property == null)
+                {
+                    return $"Failed to find property {p.PropertyPath} on component {p.ComponentType}";
+                }
+
+                if (!ApplyValueToCorrectProperty(property, p, out var applyError)) { return applyError; }
+                so.ApplyModifiedProperties();
+                if (!TrySaveScene()) { return "Failed to save scene"; }
+            }
+            catch (Exception e)
+            {
+                return $"Failed to set property: {e.Message}";
+            }
+
+            return $"Set property {p.PropertyPath} of component {p.ComponentType} on GameObject {go.name} to {p.Value}";
+        }
+
         private static void ForceUnityUpdate(string path)
         {
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
@@ -142,7 +184,7 @@ namespace MultiAgentBridge
         {
             foreach (var t in TypeCache.GetTypesDerivedFrom<Component>())
             {
-                if (t.Name == name) return t;
+                if (t.Name == name) { return t; }
             }
             return null;
         }
@@ -152,5 +194,75 @@ namespace MultiAgentBridge
             bool success = EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
             return success;
         }
+
+        private static bool ApplyValueToCorrectProperty(SerializedProperty property, SetPropertyParams p, out string error)
+        {
+            switch (property.propertyType)
+            {
+                case SerializedPropertyType.Float:
+                    property.floatValue = p.Value.Value<float>();
+                    break;
+
+                case SerializedPropertyType.Vector3:
+                    var v = p.Value.ToObject<float[]>();
+                    property.vector3Value = new Vector3(v[0], v[1], v[2]);
+                    break;
+                
+                case SerializedPropertyType.Color:
+                    var c = p.Value.ToObject<float[]>();
+                    property.colorValue = new Color(c[0], c[1], c[2], c[3]);
+                    break;
+                
+                case SerializedPropertyType.Boolean:
+                    property.boolValue = p.Value.Value<bool>();
+                    break;
+                
+                case SerializedPropertyType.Integer:
+                    property.intValue = p.Value.Value<int>();
+                    break;
+                
+                case SerializedPropertyType.String:
+                    property.stringValue = p.Value.Value<string>();
+                    break;
+
+                case SerializedPropertyType.ObjectReference:
+                    var refId = p.Value.Value<string>();
+                    if (!TryResolveGameObject(refId, out var refGo, out var refError))
+                    {
+                        error = refError;
+                        return false;
+                    }
+
+                    if (string.IsNullOrEmpty(p.ReferenceComponentType))
+                    {
+                        property.objectReferenceValue = refGo;
+                    }
+                    else
+                    {
+                        var refType = FindComponentType(p.ReferenceComponentType);
+                        if (refType == null)
+                        {
+                            error = $"Failed to find component type: {p.ReferenceComponentType}";
+                            return false;
+                        }
+
+                        var comp = refGo.GetComponent(refType);
+                        if (comp == null)
+                        {
+                            error = $"GameObject {refGo.name} does not have a component of type {p.ReferenceComponentType}. Consider that it may have a different internal name.";
+                            return false;
+                        }
+                        
+                        property.objectReferenceValue = comp;
+                    }
+                    break;
+                
+                default:
+                    error = $"Unsupported property type: {property.propertyType}";
+                    return false;
+            }
+            error = null;
+            return true;
+        }   
     }
 }
