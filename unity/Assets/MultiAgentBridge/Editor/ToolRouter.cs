@@ -195,70 +195,70 @@ namespace MultiAgentBridge
             return success;
         }
 
-        private static bool ApplyValueToCorrectProperty(SerializedProperty property, SetPropertyParams p, out string error)
+        private static bool ApplyValueToCorrectProperty(SerializedProperty objectProperty, SetPropertyParams objectParams, out string error)
         {
-            switch (property.propertyType)
+            switch (objectProperty.propertyType)
             {
                 case SerializedPropertyType.Float:
-                    property.floatValue = p.Value.Value<float>();
+                    objectProperty.floatValue = objectParams.Value.Value<float>();
                     break;
 
                 case SerializedPropertyType.Vector3:
-                    var v = p.Value.ToObject<float[]>();
-                    property.vector3Value = new Vector3(v[0], v[1], v[2]);
+                    var v = objectParams.Value.ToObject<float[]>();
+                    objectProperty.vector3Value = new Vector3(v[0], v[1], v[2]);
                     break;
                 
                 case SerializedPropertyType.Color:
-                    var c = p.Value.ToObject<float[]>();
-                    property.colorValue = new Color(c[0], c[1], c[2], c[3]);
+                    var c = objectParams.Value.ToObject<float[]>();
+                    objectProperty.colorValue = new Color(c[0], c[1], c[2], c[3]);
                     break;
                 
                 case SerializedPropertyType.Boolean:
-                    property.boolValue = p.Value.Value<bool>();
+                    objectProperty.boolValue = objectParams.Value.Value<bool>();
                     break;
                 
                 case SerializedPropertyType.Integer:
-                    property.intValue = p.Value.Value<int>();
+                    objectProperty.intValue = objectParams.Value.Value<int>();
                     break;
                 
                 case SerializedPropertyType.String:
-                    property.stringValue = p.Value.Value<string>();
+                    objectProperty.stringValue = objectParams.Value.Value<string>();
                     break;
 
                 case SerializedPropertyType.ObjectReference:
-                    var refId = p.Value.Value<string>();
-                    if (!TryResolveGameObject(refId, out var refGo, out var refError))
+                    var referenceID = objectParams.Value.Value<string>();
+                    if (!TryResolveGameObject(referenceID, out var referenceObject, out var referenceError))
                     {
-                        error = refError;
+                        error = referenceError;
                         return false;
                     }
 
-                    if (string.IsNullOrEmpty(p.ReferenceComponentType))
+                    if (string.IsNullOrEmpty(objectParams.ReferenceComponentType))
                     {
-                        property.objectReferenceValue = refGo;
+                        objectProperty.objectReferenceValue = referenceObject;
                     }
                     else
                     {
-                        var refType = FindComponentType(p.ReferenceComponentType);
-                        if (refType == null)
+                        var referenceType = FindComponentType(objectParams.ReferenceComponentType);
+                        if (referenceType == null)
                         {
-                            error = $"Failed to find component type: {p.ReferenceComponentType}";
+                            error = $"Failed to find component type: {objectParams.ReferenceComponentType}";
                             return false;
                         }
 
-                        var comp = refGo.GetComponent(refType);
+                        var comp = referenceObject.GetComponent(referenceType);
                         if (comp == null)
                         {
-                            error = $"GameObject {refGo.name} does not have a component of type {p.ReferenceComponentType}. Consider that it may have a different internal name.";
+                            error = $"GameObject {referenceObject.name} does not have a component of type {objectParams.ReferenceComponentType}. Consider that it may have a different internal name.";
                             return false;
                         }
                         
-                        property.objectReferenceValue = comp;
+                        objectProperty.objectReferenceValue = comp;
                     }
                     break;
                 
                 default:
-                    error = $"Unsupported property type: {property.propertyType}";
+                    error = $"Unsupported property type: {objectProperty.propertyType}";
                     return false;
             }
             error = null;
