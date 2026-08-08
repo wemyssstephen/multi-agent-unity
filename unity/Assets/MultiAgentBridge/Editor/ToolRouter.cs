@@ -113,43 +113,37 @@ namespace MultiAgentBridge
 
         private static string SetProperty(JObject args)
         {
-            var p = args.ToObject<SetPropertyParams>();
-            if (!TryResolveGameObject(p.GameObjectId, out var go, out var error))
-            {
-                return error;
-            }
+            var objectParams = args.ToObject<SetPropertyParams>();
+            if (!TryResolveGameObject(objectParams.GameObjectId, out var gameObject, out var error)) { return error; }
 
             try
             {
-                var type = FindComponentType(p.ComponentType);
+                var type = FindComponentType(objectParams.ComponentType);
                 if (type == null)
                 {
-                    return $"Failed to find component type: {p.ComponentType}";
+                    return $"Failed to find component type: {objectParams.ComponentType}";
                 }
 
-                var component = go.GetComponent(type);
+                var component = gameObject.GetComponent(type);
                 if (component == null)
                 {
-                    return $"GameObject {go.name} does not have a component of type {p.ComponentType}. Consider that it may have a different internal name.";
+                    return $"GameObject {gameObject.name} does not have a component of type {objectParams.ComponentType}. Consider that it may have a different internal name.";
                 }
 
-                var so = new SerializedObject(component);
-                var property = so.FindProperty(p.PropertyPath);
+                var serializedComponent = new SerializedObject(component);
+                var property = serializedComponent.FindProperty(objectParams.PropertyPath);
                 if (property == null)
                 {
-                    return $"Failed to find property {p.PropertyPath} on component {p.ComponentType}";
+                    return $"Failed to find property {objectParams.PropertyPath} on component {objectParams.ComponentType}";
                 }
 
-                if (!ApplyValueToCorrectProperty(property, p, out var applyError)) { return applyError; }
-                so.ApplyModifiedProperties();
+                if (!ApplyValueToCorrectProperty(property, objectParams, out var applyError)) { return applyError; }
+                serializedComponent.ApplyModifiedProperties();
                 if (!TrySaveScene()) { return "Failed to save scene"; }
             }
-            catch (Exception e)
-            {
-                return $"Failed to set property: {e.Message}";
-            }
+            catch (Exception e) { return $"Failed to set property: {e.Message}";}
 
-            return $"Set property {p.PropertyPath} of component {p.ComponentType} on GameObject {go.name} to {p.Value}";
+            return $"Set property {objectParams.PropertyPath} of component {objectParams.ComponentType} on GameObject {gameObject.name} to {objectParams.Value}";
         }
 
         private static void ForceUnityUpdate(string path)
@@ -158,9 +152,9 @@ namespace MultiAgentBridge
             // EditorApplication.QueuePlayerLoopUpdate();
         }
 
-        private static bool TryResolveGameObject(string id, out GameObject go, out string error)
+        private static bool TryResolveGameObject(string id, out GameObject gameObject, out string error)
         {
-            go = null;
+            gameObject = null;
             error = null;
 
             if (!GlobalObjectId.TryParse(id, out var globalObjectId))
@@ -170,8 +164,8 @@ namespace MultiAgentBridge
             }
 
             var obj = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(globalObjectId);
-            go = obj as GameObject;
-            if (go == null)
+            gameObject = obj as GameObject;
+            if (gameObject == null)
             {
                 error = $"Failed to get GameObject by ID: {id}";
                 return false;
