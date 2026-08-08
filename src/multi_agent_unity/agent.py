@@ -1,9 +1,7 @@
+from mcp import Client
+from mcp.client.stdio import StdioServerParameters, stdio_client
 
 import multi_agent_unity.client as client
-from mcp import Client
-from mcp.client.stdio import stdio_client, StdioServerParameters
-from pprint import pprint
-import json
 
 server_params = StdioServerParameters(
     command=r"C:\dev\multi-agent-unity\.venv\Scripts\python.exe",
@@ -21,7 +19,7 @@ async def agent_loop(task: str, sender=client.send_request) -> dict:
         anthropic_tools = [
             {"name": t.name, "description": t.description, "input_schema": t.input_schema} for t in tools.tools
         ]
-        
+
         # The stored conversation with the agent
         messages = [{"role": "user", "content": task}]
 
@@ -50,7 +48,8 @@ async def agent_loop(task: str, sender=client.send_request) -> dict:
                 # Build an empty list for the results of tool use
                 tool_results = []
                 for call in tool_calls:
-                    # Send the tool's name and input to the MCP server, which POSTs to Unity, which runs the tool and replies
+                    # Send the tool's name and input to the MCP server. MCP POSTs to Unity.
+                    # Unity runs the tool and replies
                     result = await mcp.call_tool(call["name"], call["input"])
                     # Grab the readable text from Unity's reply
                     text = result.content[0].text
