@@ -23,6 +23,7 @@ namespace MultiAgentBridge
             toolHandlers["create_script"] = CreateScript;
             toolHandlers["add_component"] = AddComponent;
             toolHandlers["set_property"] = SetProperty;
+            toolHandlers["create_primitive"] = CreatePrimitive;
         }
 
         /// <summary>
@@ -146,6 +147,19 @@ namespace MultiAgentBridge
             return $"Set property {objectParams.PropertyPath} of component {objectParams.ComponentType} on GameObject {gameObject.name} to {objectParams.Value}";
         }
 
+        private static string CreatePrimitive(JObject args)
+        {
+            var p = args.ToObject<CreatePrimitiveParams>();
+            if (!Enum.TryParse<PrimitiveType>(p.PrimitiveName, ignoreCase: true, out var type))
+            {
+                return $"Unknown primitive type: {p.PrimitiveName}";
+            }
+            var go = GameObject.CreatePrimitive(type);
+            go.name = p.ObjectName;
+            if (!TrySaveScene()) { return "Failed to save scene"; }
+            var objectId = GlobalObjectId.GetGlobalObjectIdSlow(go).ToString(); // TODO: add guard against null return value, which can happen
+            return $"Created primitive {go.name}. ID: {objectId}";
+        }
         private static void ForceUnityUpdate(string path)
         {
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);

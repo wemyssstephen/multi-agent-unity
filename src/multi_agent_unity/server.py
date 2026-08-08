@@ -24,9 +24,9 @@ def create_script(script_name: str, target_path: str, script_content: str) -> st
     payload =   {
                     "Name": "create_script",
                     "Args": {
-                    "ScriptName": script_name,
-                    "TargetPath": target_path,
-                    "ScriptContent": script_content
+                        "ScriptName": script_name,
+                        "TargetPath": target_path,
+                        "ScriptContent": script_content
                     }
                 }
     response = requests.post(f"{BRIDGE_URL}", json=payload)
@@ -38,8 +38,8 @@ def add_component(game_object_id: str, component_type: str) -> str:
     payload =   {
                     "Name": "add_component",
                     "Args": {
-                    "GameObjectId": game_object_id,
-                    "ComponentType": component_type
+                        "GameObjectId": game_object_id,
+                        "ComponentType": component_type
                     }
                 }
     response = requests.post(f"{BRIDGE_URL}", json=payload)
@@ -55,15 +55,27 @@ def set_property(game_object_id: str,
     payload =   {
                     "Name": "set_property",
                     "Args": {
-                    "GameObjectId": game_object_id,
-                    "ComponentType": component_type,
-                    "PropertyPath": property_path,
-                    "Value": value,
+                        "GameObjectId": game_object_id,
+                        "ComponentType": component_type,
+                        "PropertyPath": property_path,
+                        "Value": value,
                     }
                 }
     if reference_component_type:
         payload["Args"]["ReferenceComponentType"] = reference_component_type
     response = requests.post(f"{BRIDGE_URL}", json=payload)
+    return response.text
+
+@mcp.tool()
+def create_primitive(object_name: str, primitive_name: str) -> str:
+    """Creates a primitive shape (Cube, Sphere, Cylinder, Capsule, Plane, Quad) with the given name"""
+    payload =   {
+                    "Name": "create_primitive",
+                    "Args": {
+                        "ObjectName": object_name,
+                        "PrimitiveName": primitive_name}
+    }
+    response = requests.post(BRIDGE_URL, json=payload)
     return response.text
 
 if __name__ == "__main__":
