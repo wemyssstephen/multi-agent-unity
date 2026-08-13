@@ -26,6 +26,8 @@ async def agent_loop(task: str, sender=client.send_request) -> dict:
         # A log of tokens used
         total_input_tokens = 0
         total_output_tokens = 0
+        total_cache_read_tokens = 0
+        total_cache_creation_tokens = 0
 
         for _ in range(10): # TODO: temporary testing cap
             # Builds the request to send to Anthropic. Packs the API key + headers + conversation + tools.
@@ -38,6 +40,8 @@ async def agent_loop(task: str, sender=client.send_request) -> dict:
             usage = client.get_usage(response)
             total_input_tokens += usage["input_tokens"]
             total_output_tokens += usage["output_tokens"]
+            total_cache_read_tokens += usage["cache_read_input_tokens"]
+            total_cache_creation_tokens += usage["cache_creation_input_tokens"]
 
             # Checks if the model wants to use a tool
             if stop == "tool_use":
@@ -65,18 +69,24 @@ async def agent_loop(task: str, sender=client.send_request) -> dict:
                 return {
                         "text": client.get_text(response),
                         "input_tokens": total_input_tokens,
-                        "output_tokens": total_output_tokens
+                        "output_tokens": total_output_tokens,
+                        "cache_read_input_tokens": total_cache_read_tokens,
+                        "cache_creation_input_tokens": total_cache_creation_tokens
                         }
             else:
                 return {
                         "text": client.get_text(response),
                         "input_tokens": total_input_tokens,
-                        "output_tokens": total_output_tokens
+                        "output_tokens": total_output_tokens,
+                        "cache_read_input_tokens": total_cache_read_tokens,
+                        "cache_creation_input_tokens": total_cache_creation_tokens
                         }
 
         return  {
                 "text": "Agent loop reached maximum iterations without completing the task.",
                 "input_tokens": total_input_tokens,
-                "output_tokens": total_output_tokens
+                "output_tokens": total_output_tokens,
+                "cache_read_input_tokens": total_cache_read_tokens,
+                "cache_creation_input_tokens": total_cache_creation_tokens
                 }
                 # TODO: this could potentially be a result class

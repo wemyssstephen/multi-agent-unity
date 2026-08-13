@@ -21,7 +21,8 @@ def build_request_payload(messages: list[dict],
     request_body =      {
                         "model": model,
                         "max_tokens": 1024,
-                        "messages": messages
+                        "messages": messages,
+                        "cache_control": {"type": "ephemeral"}
                         }
 
     if tools:
@@ -46,6 +47,8 @@ def get_usage(response: dict) -> dict:
     return {
         "input_tokens": usage["input_tokens"],
         "output_tokens": usage["output_tokens"],
+        "cache_read_input_tokens": usage.get("cache_read_input_tokens", 0),
+        "cache_creation_input_tokens": usage.get("cache_creation_input_tokens", 0)
     }
 
 def get_stop_reason(response: dict) -> str:
