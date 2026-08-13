@@ -160,6 +160,7 @@ namespace MultiAgentBridge
             var objectId = GlobalObjectId.GetGlobalObjectIdSlow(go).ToString(); // TODO: add guard against null return value, which can happen
             return $"Created primitive {go.name}. ID: {objectId}";
         }
+        
         private static void ForceUnityUpdate(string path)
         {
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
