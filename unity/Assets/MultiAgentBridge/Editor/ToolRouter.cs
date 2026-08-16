@@ -1,11 +1,14 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using Unity.VisualScripting;
 
 namespace MultiAgentBridge
 {
@@ -17,6 +20,7 @@ namespace MultiAgentBridge
     public static class ToolRouter
     {
         private static readonly Dictionary<string, Func<JObject, string>> toolHandlers = new();
+
         static ToolRouter()
         {
             toolHandlers["create_gameobject"] = CreateGameObject;
@@ -24,6 +28,16 @@ namespace MultiAgentBridge
             toolHandlers["add_component"] = AddComponent;
             toolHandlers["set_property"] = SetProperty;
             toolHandlers["create_primitive"] = CreatePrimitive;
+            toolHandlers["read_scene"] = ReadScene;
+        }
+
+        private class SceneNode
+        {
+            public string Name;
+            public string GlobalObjectId;
+            public List<string> Components;
+            public bool ActiveSelf;
+            public List<SceneNode> Children;
         }
 
         /// <summary>
@@ -160,6 +174,13 @@ namespace MultiAgentBridge
             var objectId = GlobalObjectId.GetGlobalObjectIdSlow(go).ToString(); // TODO: add guard against null return value, which can happen
             return $"Created primitive {go.name}. ID: {objectId}";
         }
+
+        private static string ReadScene(JObject args)
+        {
+            var rootObjects = SceneManager.GetActiveScene().GetRootGameObjects();
+            var nodes = rootObjects.Select(BuildNode).ToList();
+            return JsonConvert.SerializeObject(nodes);
+        }
         
         private static void ForceUnityUpdate(string path)
         {
@@ -273,5 +294,23 @@ namespace MultiAgentBridge
             error = null;
             return true;
         }   
+
+        private static SceneNode BuildNode(GameObject gameObject)
+        {
+            SceneNode node = new SceneNode();
+            node.Name = gameObject.name;
+            node.GlobalObjectId = GlobalObjectId.GetGlobalObjectIdSlow(gameObject).ToString();
+            node.Components = gameObject.GetComponents<Component>()
+                                        .Where(c => c != null)
+                                        .Select(c => c.GetType().Name)
+                                        .ToList();
+            node.ActiveSelf = gameObject.activeSelf;
+            node.Children = new List<SceneNode>();
+            foreach (Transform child in gameObject.transform)
+            {
+                node.Children.Add(BuildNode(child.gameObject));
+            }
+            return node;
+        }
     }
 }
