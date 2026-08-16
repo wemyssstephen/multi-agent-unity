@@ -78,5 +78,27 @@ def create_primitive(object_name: str, primitive_name: str) -> str:
     response = requests.post(BRIDGE_URL, json=payload)
     return response.text
 
+@mcp.tool()
+def read_scene() -> str:
+    """Returns the scene hierarchy with nested tree"""
+    payload =   {
+                    "Name": "read_scene",
+                    "Args": {}
+                }
+    response = requests.post(BRIDGE_URL, json=payload)
+    return response.text
+
+@mcp.tool()
+def read_script(script_path: str) -> str:
+    """Returns the full contents of a C# script at a given path"""
+    payload =   {
+                    "Name": "read_script",
+                    "Args": {
+                        "ScriptPath": script_path
+                    }
+                }
+    response = requests.post(BRIDGE_URL, json=payload)
+    return response.text
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

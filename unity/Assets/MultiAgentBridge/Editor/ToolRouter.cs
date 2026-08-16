@@ -29,6 +29,7 @@ namespace MultiAgentBridge
             toolHandlers["set_property"] = SetProperty;
             toolHandlers["create_primitive"] = CreatePrimitive;
             toolHandlers["read_scene"] = ReadScene;
+            toolHandlers["read_script"] = ReadScript;
         }
 
         private class SceneNode
@@ -98,6 +99,27 @@ namespace MultiAgentBridge
             }
             ForceUnityUpdate(path);
             return $"Created {path}";
+        }
+
+        private static string ReadScript(JObject args)
+        {
+            var p = args.ToObject<ReadScriptParams>();
+            var assetsFolderPath = Application.dataPath.Replace('\\', '/') + "/";
+            var filePath = Path.GetFullPath(p.ScriptPath).Replace('\\', '/');
+
+            if (!filePath.StartsWith(assetsFolderPath))
+            {
+                return $"Target path must be inside the Assets folder: {p.ScriptPath}";
+            }
+
+            try
+            {
+                return File.ReadAllText(filePath);
+            }
+            catch (Exception e)
+            {
+                return $"Failed to read script: {e.Message}";
+            }
         }
 
         private static string AddComponent(JObject args)
