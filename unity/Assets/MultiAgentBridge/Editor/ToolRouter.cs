@@ -20,6 +20,7 @@ namespace MultiAgentBridge
     public static class ToolRouter
     {
         private static readonly Dictionary<string, Func<JObject, string>> toolHandlers = new();
+        private static List<string> logBuffer = new();
 
         static ToolRouter()
         {
@@ -30,6 +31,7 @@ namespace MultiAgentBridge
             toolHandlers["create_primitive"] = CreatePrimitive;
             toolHandlers["read_scene"] = ReadScene;
             toolHandlers["read_script"] = ReadScript;
+            toolHandlers["read_console"] = ReadConsole;
         }
 
         private class SceneNode
@@ -202,6 +204,11 @@ namespace MultiAgentBridge
             var rootObjects = SceneManager.GetActiveScene().GetRootGameObjects();
             var nodes = rootObjects.Select(BuildNode).ToList();
             return JsonConvert.SerializeObject(nodes);
+        }
+
+        private static string ReadConsole(JObject args)
+        {
+            return ConsoleReader.GetLogs();
         }
         
         private static void ForceUnityUpdate(string path)
