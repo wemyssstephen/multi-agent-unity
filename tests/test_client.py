@@ -2,7 +2,10 @@ from multi_agent_unity.client import build_request_payload, get_text, get_usage
 
 RESPONSE =  {
                 "content": [{"type": "text", "text": "Hello!"}, {"type": "text", "text": "How are you?"}],
-                "usage": {"input_tokens": 11, "output_tokens": 19},
+                "usage": {"input_tokens": 11,
+                          "output_tokens": 19,
+                          "cache_read_input_tokens": 0,
+                          "cache_creation_input_tokens": 0}
             } # TODO: Consider making the response a fixture to be used in multiple tests.
                 # Also, means that a test mutating it doesn't matter.
 
@@ -22,4 +25,7 @@ def test_get_text() -> None:
 
 def test_get_usage() -> None:
     usage = get_usage(RESPONSE)
-    assert usage == {"input_tokens": 11, "output_tokens": 19}
+    assert usage == {"input_tokens": 11,
+                     "output_tokens": 19,
+                     "cache_read_input_tokens": 0,
+                     "cache_creation_input_tokens": 0}
