@@ -7,7 +7,8 @@ END_POINT = "https://api.anthropic.com/v1/messages"
 def build_request_payload(messages: list[dict],
                           *,
                           tools: list[dict] | None = None,
-                          model: str = "claude-haiku-4-5-20251001") -> tuple[dict, dict]:
+                          model: str,
+                          system=None) -> tuple[dict, dict]:
     """Builds the request payload for the Anthropic API."""
 
     api_key = get_anthropic_api_key() # TODO: Consider fetching the API key as this is a dependency
@@ -24,7 +25,9 @@ def build_request_payload(messages: list[dict],
                         "messages": messages,
                         "cache_control": {"type": "ephemeral"}
                         }
-
+    if system:
+        request_body["system"] = system
+    
     if tools:
         request_body["tools"] = tools
 

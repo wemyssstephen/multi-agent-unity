@@ -100,6 +100,7 @@ def read_script(script_path: str) -> str:
     response = requests.post(BRIDGE_URL, json=payload)
     return response.text
 
+@mcp.tool()
 def read_console() -> str:
     """Returns the last 500 lines of the console"""
     payload = {
