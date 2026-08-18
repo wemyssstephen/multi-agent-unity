@@ -1,6 +1,6 @@
+import time
 from typing import Any
 
-import time
 import requests
 from mcp.server import MCPServer
 
@@ -77,7 +77,7 @@ def set_property(game_object_id: str,
                 }
     if reference_component_type:
         payload["Args"]["ReferenceComponentType"] = reference_component_type
-        
+
     return post_with_compile_retry(payload=payload)
 
 @mcp.tool()

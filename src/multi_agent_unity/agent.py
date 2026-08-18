@@ -47,17 +47,17 @@ async def run_agent(task: str, agent: Agent, mcp, sender) -> dict:
     for _ in range(10): # TODO: temporary testing cap
         # Builds the request to send to Anthropic. Packs the API key + headers + conversation + tools.
         headers, body = client.build_request_payload(messages, tools=agent.tools, model=agent.model, system=agent.system_prompt)
-        
+
         # Sends the request to the Anthropic API
         response = sender(headers, body)
-        
+
         # Pulls current token count
         usage = client.get_usage(response)
         total_input_tokens += usage["input_tokens"]
         total_output_tokens += usage["output_tokens"]
         total_cache_read_tokens += usage["cache_read_input_tokens"]
         total_cache_creation_tokens += usage["cache_creation_input_tokens"]
-        
+
         # Extracts the reason the conversation stopped.
         stop = client.get_stop_reason(response)
         # print(f"{agent.name} stop reason: {stop}")

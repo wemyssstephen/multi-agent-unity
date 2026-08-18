@@ -1,7 +1,7 @@
 import json
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 
 BRIDGE_URL = "http://localhost:8080/"
 
