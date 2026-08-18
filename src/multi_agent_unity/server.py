@@ -11,7 +11,11 @@ def post_with_compile_retry(payload: dict) -> str:
     # "Failed to find component type" means the script hasn't compiled yet.
     # Coupled to ToolRouter.FindComponentType's return string — rename one, rename both.
     for _ in range(10):
-        response = requests.post(f"{BRIDGE_URL}", json=payload)
+        try:
+            response = requests.post(f"{BRIDGE_URL}", json=payload)
+        except requests.exceptions.ConnectionError:
+            time.sleep(1)
+            continue
         if "Failed to find component type" not in response.text:
             break
         time.sleep(1)
