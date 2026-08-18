@@ -2,7 +2,7 @@ from mcp import Client
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
 import multi_agent_unity.client as client
-from multi_agent_unity.agent_classes import Agent, SingleAgent, OrchestratorAgent
+from multi_agent_unity.agent_classes import Agent, OrchestratorAgent, SingleAgent
 
 server_params = StdioServerParameters(
     command=r"C:\dev\multi-agent-unity\.venv\Scripts\python.exe",
@@ -22,12 +22,12 @@ async def agent_loop_handler(task: str, system_flag, model="claude-haiku-4-5-202
             # Run multi-agent loop
             agent = OrchestratorAgent.make(model, anthropic_tools)
             return await run_agent(task, agent, mcp, sender)
-        
+
         elif system_flag == "s":
             # Run single-agent loop
             agent = SingleAgent.make(model, anthropic_tools)
             return await run_agent(task, agent, mcp, sender)
-        
+
         else:
             # Report that system flag is wrong
             return ""

@@ -12,7 +12,8 @@ RESPONSE =  {
 def test_build_request_payload(monkeypatch) -> None:
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_api_key")
     messages = [{"role": "user", "content": "Hello, world!"}]
-    headers, body = build_request_payload(messages)
+    model = "claude-haiku-4-5-20251001"
+    headers, body = build_request_payload(messages, model=model)
 
     assert "x-api-key" in headers
     assert headers["Content-Type"] == "application/json"

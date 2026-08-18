@@ -8,12 +8,12 @@ class Agent:
         self.tools = tools
         self.all_tools = all_tools
         self.system_prompt = system_prompt
-    
+
     @classmethod
     def make(cls, model, all_tools):
         tools = [t for t in all_tools if t["name"] in cls.tool_names]
         return cls(model=model, tools=tools, all_tools=all_tools)
-    
+
     def build_worker(self, worker_name):
         return WORKER_CLASSES[worker_name].make(self.model, self.all_tools)
 
@@ -43,7 +43,7 @@ class OrchestratorAgent(Agent):
                           "properties": {"task": {"type": "string"}},
                           "required": ["task"]}},
     ]
-    
+
     @classmethod
     def make(cls, model, all_tools):
         return cls(model=model, tools=cls.worker_schemas, all_tools=all_tools)
@@ -60,7 +60,7 @@ class ScriptAgent(Agent):
 class ConsoleAgent(Agent):
     name = "console_agent"
     tool_names = ["read_console"]
-    
+
 WORKER_CLASSES = {  "single_agent":   SingleAgent,
                     "orchestrator":   OrchestratorAgent,
                     "scene_agent":    SceneAgent,

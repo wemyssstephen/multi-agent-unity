@@ -19,7 +19,7 @@ packages = ["src/multi_agent_unity"]
 testpaths = ["tests"]
 
 [tool.ruff]
-line-length = 120
+line-length = 160
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]

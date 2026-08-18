@@ -27,7 +27,7 @@ def build_request_payload(messages: list[dict],
                         }
     if system:
         request_body["system"] = system
-    
+
     if tools:
         request_body["tools"] = tools
 
