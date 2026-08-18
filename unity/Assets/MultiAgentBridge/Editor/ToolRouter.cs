@@ -81,19 +81,27 @@ namespace MultiAgentBridge
         private static string CreateScript(JObject args)
         {
             var p = args.ToObject<CreateScriptParams>();
+
+            // The model sometimes provides the filename in the TargetPath and sometimes appends .cs to ScriptName.
+            // So we strip the filename off the TargetPath and strip any extensions.
+            var dir = p.TargetPath;
+            if (dir.EndsWith(".cs"))
+            {
+                dir = Path.GetDirectoryName(dir);
+            }
+            var name = Path.GetFileNameWithoutExtension(p.ScriptName);
+            var path = $"{dir}/{name}.cs";
             var assetsFolderPath = Application.dataPath.Replace('\\', '/') + "/";
-            var filePath = Path.GetFullPath(p.TargetPath).Replace('\\', '/') + "/";
+            var filePath = Path.GetFullPath(path).Replace('\\', '/');
 
             if (!filePath.StartsWith(assetsFolderPath))
             {
                 return $"Target path must be inside the Assets folder: {p.TargetPath}";
             }
 
-            var name = Path.GetFileNameWithoutExtension(p.ScriptName);
-            var path = $"{p.TargetPath}/{name}.cs";
             try
             {
-            Directory.CreateDirectory(p.TargetPath);
+            Directory.CreateDirectory(dir);
             File.WriteAllText(path, p.ScriptContent);
             }
             catch (Exception e)
