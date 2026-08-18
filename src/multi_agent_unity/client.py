@@ -21,7 +21,7 @@ def build_request_payload(messages: list[dict],
 
     request_body =      {
                         "model": model,
-                        "max_tokens": 1024,
+                        "max_tokens": 8192,
                         "messages": messages,
                         "cache_control": {"type": "ephemeral"}
                         }

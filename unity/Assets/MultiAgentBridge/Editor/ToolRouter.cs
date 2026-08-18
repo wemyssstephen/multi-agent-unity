@@ -81,18 +81,19 @@ namespace MultiAgentBridge
         private static string CreateScript(JObject args)
         {
             var p = args.ToObject<CreateScriptParams>();
-            var path = $"{p.TargetPath}/{p.ScriptName}.cs";
             var assetsFolderPath = Application.dataPath.Replace('\\', '/') + "/";
-            var filePath = Path.GetFullPath(path).Replace('\\', '/');
+            var filePath = Path.GetFullPath(p.TargetPath).Replace('\\', '/') + "/";
 
             if (!filePath.StartsWith(assetsFolderPath))
             {
                 return $"Target path must be inside the Assets folder: {p.TargetPath}";
             }
 
+            var name = Path.GetFileNameWithoutExtension(p.ScriptName);
+            var path = $"{p.TargetPath}/{name}.cs";
             try
             {
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Directory.CreateDirectory(p.TargetPath);
             File.WriteAllText(path, p.ScriptContent);
             }
             catch (Exception e)

@@ -12,7 +12,7 @@ server_params = StdioServerParameters(
 async def agent_loop_handler(task: str, system_flag, model="claude-haiku-4-5-20251001", sender=client.send_request) -> dict:
     """Handles agent loops"""
     async with Client(stdio_client(server_params)) as mcp:
-    # Find the tools available on the server.
+        # Find the tools available on the server.
         tools = await mcp.list_tools()
         # Reshape the format to what Anthropic expects.
         anthropic_tools =   [
@@ -30,7 +30,7 @@ async def agent_loop_handler(task: str, system_flag, model="claude-haiku-4-5-202
 
         else:
             # Report that system flag is wrong
-            return ""
+            return print("System flag is wrong. Use 'm' for multi-agent or 's' for single-agent.")
 
 
 async def run_agent(task: str, agent: Agent, mcp, sender) -> dict:
@@ -60,6 +60,9 @@ async def run_agent(task: str, agent: Agent, mcp, sender) -> dict:
         
         # Extracts the reason the conversation stopped.
         stop = client.get_stop_reason(response)
+        # print(f"{agent.name} stop reason: {stop}")
+        # if not client.get_text(response) and stop != "tool_use":
+            # print(f"[{agent.name}] empty turn, content: {response['content']}")
 
         # Checks if the model wants to use a tool
         if stop == "tool_use":
@@ -79,6 +82,11 @@ async def run_agent(task: str, agent: Agent, mcp, sender) -> dict:
                     result = await run_agent(call["input"]["task"], worker, mcp, sender)
                     # Extract the result
                     text = result["text"]
+                    # Extract the token count of the worker
+                    total_input_tokens += result["input_tokens"]
+                    total_output_tokens += result["output_tokens"]
+                    total_cache_read_tokens += result["cache_read_input_tokens"]
+                    total_cache_creation_tokens += result["cache_creation_input_tokens"]
                     print(f"[{call['name']}] -> {text}")
                 else:
                     # Call the Unity tool

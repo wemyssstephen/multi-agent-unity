@@ -2,6 +2,7 @@ class Agent:
     name = None
     worker_names: list[str] = []
     tool_names: list[str] = []
+    system_prompt: str | None = None
 
     def __init__(self, model, tools, all_tools, system_prompt=None):
         self.model = model
@@ -12,7 +13,7 @@ class Agent:
     @classmethod
     def make(cls, model, all_tools):
         tools = [t for t in all_tools if t["name"] in cls.tool_names]
-        return cls(model=model, tools=tools, all_tools=all_tools)
+        return cls(model=model, tools=tools, all_tools=all_tools, system_prompt=cls.system_prompt)
 
     def build_worker(self, worker_name):
         return WORKER_CLASSES[worker_name].make(self.model, self.all_tools)
@@ -46,7 +47,7 @@ class OrchestratorAgent(Agent):
 
     @classmethod
     def make(cls, model, all_tools):
-        return cls(model=model, tools=cls.worker_schemas, all_tools=all_tools)
+        return cls(model=model, tools=cls.worker_schemas, all_tools=all_tools, system_prompt=cls.system_prompt)
 
 class SceneAgent(Agent):
     name = "scene_agent"
@@ -56,6 +57,7 @@ class SceneAgent(Agent):
 class ScriptAgent(Agent):
     name = "script_agent"
     tool_names = ["create_script", "read_script"]
+    system_prompt = "Place scripts in Assets/Scripts unless the task specifies otherwise."
 
 class ConsoleAgent(Agent):
     name = "console_agent"

@@ -1,10 +1,21 @@
 from typing import Any
 
+import time
 import requests
 from mcp.server import MCPServer
 
 mcp = MCPServer("Multi-Agent Unity Server", "1.0.0")
 BRIDGE_URL = "http://localhost:8080"
+
+def post_with_compile_retry(payload: dict) -> str:
+    # "Failed to find component type" means the script hasn't compiled yet.
+    # Coupled to ToolRouter.FindComponentType's return string — rename one, rename both.
+    for _ in range(10):
+        response = requests.post(f"{BRIDGE_URL}", json=payload)
+        if "Failed to find component type" not in response.text:
+            break
+        time.sleep(1)
+    return response.text
 
 @mcp.tool()
 def create_gameobject(object_name: str) -> str:
@@ -42,8 +53,7 @@ def add_component(game_object_id: str, component_type: str) -> str:
                         "ComponentType": component_type
                     }
                 }
-    response = requests.post(f"{BRIDGE_URL}", json=payload)
-    return response.text
+    return post_with_compile_retry(payload=payload)
 
 @mcp.tool()
 def set_property(game_object_id: str,
@@ -63,8 +73,8 @@ def set_property(game_object_id: str,
                 }
     if reference_component_type:
         payload["Args"]["ReferenceComponentType"] = reference_component_type
-    response = requests.post(f"{BRIDGE_URL}", json=payload)
-    return response.text
+        
+    return post_with_compile_retry(payload=payload)
 
 @mcp.tool()
 def create_primitive(object_name: str, primitive_name: str) -> str:
