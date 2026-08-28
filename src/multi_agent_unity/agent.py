@@ -1,12 +1,12 @@
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
-import multi_agent_unity.client as client
+import multi_agent_unity.agent_client as agent_client
 from multi_agent_unity.agent_classes import Agent, OrchestratorAgent, SingleAgent
 
 server_params = StdioServerParameters(
     command=r"C:\dev\multi-agent-unity\.venv\Scripts\python.exe",
-    args=[r"C:\dev\multi-agent-unity\src\multi_agent_unity\server.py"],
+    args=[r"C:\dev\multi-agent-unity\src\multi_agent_unity\mcp_server.py"],
 )
 
 def accumulate_tokens(usage_totals: dict, usage: dict) -> None:
@@ -15,7 +15,7 @@ def accumulate_tokens(usage_totals: dict, usage: dict) -> None:
     usage_totals["cache_read_input_tokens"] += usage["cache_read_input_tokens"]
     usage_totals["cache_creation_input_tokens"] += usage["cache_creation_input_tokens"]
 
-async def agent_loop_handler(task: str, system_flag, model="claude-haiku-4-5-20251001", sender=client.send_request) -> dict:
+async def agent_loop_handler(task: str, system_flag, model="claude-haiku-4-5-20251001", sender=agent_client.send_request) -> dict:
     """Handles agent loops"""
     async with Client(stdio_client(server_params)) as mcp:
         # Find the tools available on the server.
@@ -49,14 +49,14 @@ async def run_agent(task: str, agent: Agent, mcp, sender) -> dict:
         }
 
     for _ in range(10): # TODO: temporary testing cap
-        headers, body = client.build_request_payload(messages, tools=agent.tools, model=agent.model, system=agent.system_prompt)
+        headers, body = agent_client.build_request_payload(messages, tools=agent.tools, model=agent.model, system=agent.system_prompt)
         response = sender(headers, body)
-        stop_reason = client.get_stop_reason(response)
-        accumulate_tokens(usage_totals, client.get_usage(response))
+        stop_reason = agent_client.get_stop_reason(response)
+        accumulate_tokens(usage_totals, agent_client.get_usage(response))
 
         if stop_reason == "tool_use":
             messages.append({"role": "assistant", "content": response["content"]})
-            tool_calls = client.get_tool_calls(response)
+            tool_calls = agent_client.get_tool_calls(response)
             tool_results = []
             for call in tool_calls:
                 if call["name"] in agent.worker_names:
@@ -70,13 +70,13 @@ async def run_agent(task: str, agent: Agent, mcp, sender) -> dict:
                     result = await mcp.call_tool(call["name"], call["input"])
                     result_text = result.content[0].text
                     print(f"[{agent.name}] tool {call['name']} -> {result_text[:120]}")
-                tool_results.append(client.build_tool_result(call["tool_use_id"], result_text))
+                tool_results.append(agent_client.build_tool_result(call["tool_use_id"], result_text))
             messages.append({"role": "user", "content": tool_results})
             continue
 
         else:
             # TODO might want to handle "max_tokens" stop reason
-            return {"text": client.get_text(response), **usage_totals}
+            return {"text": agent_client.get_text(response), **usage_totals}
 
     return {"text": "Hit max iterations", **usage_totals}
 
