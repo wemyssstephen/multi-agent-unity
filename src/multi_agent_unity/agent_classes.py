@@ -20,12 +20,18 @@ class Agent:
 
 class SingleAgent(Agent):
     name = "single_agent"
+    system_prompt = "You receive a plain-language Unity task that you must complete."
     tool_names = ["create_gameobject", "create_script", "add_component",
                   "set_property", "create_primitive",
                   "read_scene", "read_script", "read_console"]
 
 class OrchestratorAgent(Agent):
     name = "orchestrator"
+    system_prompt = ("You receive a plain-language Unity task, break it into steps, "
+                     "and delegate each to a specialist. The Scene Agent for GameObjects "
+                     "and hierarchy, the Script Agent for C# scripts, and the Console "
+                     "Agent for compilation errors. When a step fails, delegate to the "
+                     "Console Agent to read errors before trying again.")
     worker_names = ["scene_agent", "script_agent", "console_agent"]
     worker_schemas = [
         {"name": "scene_agent",
