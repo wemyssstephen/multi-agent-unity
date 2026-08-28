@@ -146,7 +146,8 @@ namespace MultiAgentBridge
                 var type = FindComponentType(p.ComponentType);
                 if (type == null)
                 {
-                    return $"Failed to find component type: {p.ComponentType}";
+                    return $"Failed to find component type: {p.ComponentType}. "
+                            + "Unity may not have compiled correctly, check the Console.";
                 }
                 go.AddComponent(type);
                 if (!TrySaveScene()) { return "Failed to save scene"; }
