@@ -44,6 +44,18 @@ def add_component(game_object_id: str, component_type: str) -> str:
     return post_with_compile_retry(payload=payload)
 
 @mcp.tool()
+def assign_sprite(game_object_id: str, sprite_path: str) -> str:
+    """Assigns a sprite to the specified game object."""
+    payload =   {
+                    "Name": "assign_sprite",
+                    "Args": {
+                        "GameObjectId": game_object_id,
+                        "SpritePath": sprite_path
+                    }
+                }
+    return post(payload=payload)
+
+@mcp.tool()
 def set_property(game_object_id: str,
                  component_type: str,
                  property_path: str,
