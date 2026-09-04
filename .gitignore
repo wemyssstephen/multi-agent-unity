@@ -34,6 +34,10 @@ Thumbs.db
 !/unity/Assets/MultiAgentBridge/
 !/unity/Assets/MultiAgentBridge/**
 
+# Working/ is per-run scratch — keep the folder, ignore its contents
+/unity/Assets/MultiAgentBridge/Working/*
+!/unity/Assets/MultiAgentBridge/Working/.gitkeep
+
 # Unity package manifest
 !/unity/Packages/
 /unity/Packages/*
