@@ -6,13 +6,14 @@ import requests
 BRIDGE_URL = "http://localhost:8080"
 
 SCENE_TEMPLATES = {
-    "sidescroller_empty":     "Assets/Benchmark/Fixtures/sidescroller_empty.unity",
-    "sidescroller_populated": "Assets/Benchmark/Fixtures/sidescroller_populated.unity",
-    "topdown_empty":          "Assets/Benchmark/Fixtures/topdown_empty.unity",
-    "topdown_populated":      "Assets/Benchmark/Fixtures/topdown_populated.unity",
+    "sidescroller_empty":     "Assets/MultiAgentBridge/Scenes/sidescroller_empty.unity",
+    "sidescroller_populated": "Assets/MultiAgentBridge/Scenes/sidescroller_populated.unity",
+    "topdown_empty":          "Assets/MultiAgentBridge/Scenes/topdown_empty.unity",
+    "topdown_populated":      "Assets/MultiAgentBridge/Scenes/topdown_populated.unity",
 }
 
-WORKING_SCENE = "Assets/Benchmark/Working/current.unity"
+PROJECT_ROOT = "unity"
+WORKING_SCENE = "Assets/MultiAgentBridge/Working/current.unity"
 
 def post(payload: dict, timeout: int = 30) -> str:
     try:
@@ -34,10 +35,17 @@ def post_with_compile_retry(payload: dict) -> str:
         time.sleep(1)
     return result
 
-def reset_scene(scene: str) -> None:
+def reset_scene(scene: str) -> str:
     """Copy scene template to the working path and open it"""
-    shutil.copy(SCENE_TEMPLATES[scene], WORKING_SCENE)
-    post({"Name": "open_scene", "Args": {"ScenePath": WORKING_SCENE}})
+    src = f"{PROJECT_ROOT}/{SCENE_TEMPLATES[scene]}"
+    shutil.copy(src, f"unity/{WORKING_SCENE}")
+    return post({"Name": "open_scene", "Args": {"ScenePath": WORKING_SCENE}})
 
-def save_scene() -> None:
-    post({"Name": "save_scene", "Args": {}})
+def save_scene() -> str:
+    return post({"Name": "save_scene", "Args": {}})
+
+def run_tests(test_name: str) -> str:
+    return post({"Name": "run_tests", "Args": {"TestName": test_name}})
+
+def poll_test_result() -> str:
+    return post({"Name": "poll_test_result", "Args": {}})

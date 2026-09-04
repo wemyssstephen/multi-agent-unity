@@ -20,18 +20,26 @@ namespace MultiAgentBridge
     public static class ToolRouter
     {
         private static readonly Dictionary<string, Func<JObject, string>> toolHandlers = new();
-        private static List<string> logBuffer = new();
+        private static readonly string WorkingScriptsRoot = Environment.GetEnvironmentVariable("BENCH_SCRIPTS_ROOT") ?? "Assets/MultiAgentBridge/Working/Scripts";
 
         static ToolRouter()
         {
+            // Agent tools
             toolHandlers["create_gameobject"] = CreateGameObject;
             toolHandlers["create_script"] = CreateScript;
             toolHandlers["add_component"] = AddComponent;
+            toolHandlers["assign_sprite"] = AssignSprite;
             toolHandlers["set_property"] = SetProperty;
             toolHandlers["create_primitive"] = CreatePrimitive;
             toolHandlers["read_scene"] = ReadScene;
             toolHandlers["read_script"] = ReadScript;
             toolHandlers["read_console"] = ReadConsole;
+
+            // Evaluation tools
+            toolHandlers["open_scene"] = OpenScene;
+            toolHandlers["save_scene"] = SaveScene;
+            toolHandlers["run_tests"] = TestRunner.RunTests;
+            toolHandlers["poll_test_result"] = TestRunner.PollTestResult;
         }
 
         private class SceneNode
@@ -84,32 +92,30 @@ namespace MultiAgentBridge
 
             // The model sometimes provides the filename in the TargetPath and sometimes appends .cs to ScriptName.
             // So we strip the filename off the TargetPath and strip any extensions.
-            var dir = p.TargetPath;
-            if (dir.EndsWith(".cs"))
+            var targetDirectory = p.TargetPath;
+            if (targetDirectory.EndsWith(".cs"))
             {
-                dir = Path.GetDirectoryName(dir);
+                targetDirectory = Path.GetDirectoryName(targetDirectory);
             }
-            var name = Path.GetFileNameWithoutExtension(p.ScriptName);
-            var path = $"{dir}/{name}.cs";
-            var assetsFolderPath = Application.dataPath.Replace('\\', '/') + "/";
-            var filePath = Path.GetFullPath(path).Replace('\\', '/');
+            var scriptName = Path.GetFileNameWithoutExtension(p.ScriptName);
+            var correctedFilePath = $"{targetDirectory}/{scriptName}.cs";
 
-            if (!filePath.StartsWith(assetsFolderPath))
+            if (!CheckInsideWorkingScriptsFolder(correctedFilePath))
             {
-                return $"Target path must be inside the Assets folder: {p.TargetPath}";
+                return $"Target path must be inside {WorkingScriptsRoot}: {p.TargetPath}";
             }
 
             try
             {
-            Directory.CreateDirectory(dir);
-            File.WriteAllText(path, p.ScriptContent);
+            Directory.CreateDirectory(targetDirectory);
+            File.WriteAllText(correctedFilePath, p.ScriptContent);
             }
             catch (Exception e)
             {
                 return $"Failed to create script: {e.Message}";
             }
-            ForceUnityUpdate(path);
-            return $"Created {path}";
+            ForceUnityUpdate(correctedFilePath);
+            return $"Created {correctedFilePath}";
         }
 
         private static string ReadScript(JObject args)
@@ -118,6 +124,7 @@ namespace MultiAgentBridge
             var assetsFolderPath = Application.dataPath.Replace('\\', '/') + "/";
             var filePath = Path.GetFullPath(p.ScriptPath).Replace('\\', '/');
 
+            // Containment check!
             if (!filePath.StartsWith(assetsFolderPath))
             {
                 return $"Target path must be inside the Assets folder: {p.ScriptPath}";
@@ -160,6 +167,35 @@ namespace MultiAgentBridge
             return $"Added component {p.ComponentType} to GameObject {go.name}";
         }
 
+        private static string AssignSprite(JObject args)
+        {
+            var p = args.ToObject<AssignSpriteParams>();
+            if (!TryResolveGameObject(p.GameObjectId, out var go, out var error))
+            {
+                return error;
+            }
+
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(p.SpritePath);
+            if (sprite == null)
+            {
+                return $"Failed to load sprite at path: {p.SpritePath}";
+            }
+
+            var spriteRenderer = go.GetComponent<SpriteRenderer>();
+            if (spriteRenderer == null)
+            {
+                return $"GameObject {go.name} does not have a SpriteRenderer component.";
+            }
+
+            var serialized = new SerializedObject(spriteRenderer);
+            var property = serialized.FindProperty("m_Sprite");
+            property.objectReferenceValue = sprite;
+            serialized.ApplyModifiedProperties();
+            
+            if (!TrySaveScene()) { return "Failed to save scene"; }
+            return $"Assigned sprite {p.SpritePath} to GameObject {go.name}";
+        }
+
         private static string SetProperty(JObject args)
         {
             var objectParams = args.ToObject<SetPropertyParams>();
@@ -181,6 +217,11 @@ namespace MultiAgentBridge
 
                 var serializedComponent = new SerializedObject(component);
                 var property = serializedComponent.FindProperty(objectParams.PropertyPath);
+                if (property == null)
+                {
+                    property = serializedComponent.FindProperty("m_" + Capitalise(objectParams.PropertyPath));
+                }
+
                 if (property == null)
                 {
                     return $"Failed to find property {objectParams.PropertyPath} on component {objectParams.ComponentType}";
@@ -264,6 +305,38 @@ namespace MultiAgentBridge
             return success;
         }
 
+        private static string OpenScene(JObject args)
+        {
+            var path = args["ScenePath"]?.ToString();
+            if (string.IsNullOrEmpty(path))
+            {
+                return "Failed to open scene: no ScenePath provided.";
+            }
+            try
+            {
+                EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+            }
+            catch (Exception e)
+            {
+                return $"Failed to open scene: {e.Message}";
+            }
+            return $"Opened scene {path}";
+        }
+
+        private static string SaveScene(JObject args)
+        {
+            if (!TrySaveScene()) { return "Failed to save scene"; }
+            return "Saved scene";
+        }
+
+        private static bool CheckInsideWorkingScriptsFolder(string path)
+        {
+            var root = Path.GetFullPath(WorkingScriptsRoot).Replace('\\', '/');
+            if (!root.EndsWith("/")) { root += "/"; }
+            var full = Path.GetFullPath(path).Replace('\\', '/');
+            return full.StartsWith(root);
+        }
+
         private static bool ApplyValueToCorrectProperty(SerializedProperty objectProperty, SetPropertyParams objectParams, out string error)
         {
             switch (objectProperty.propertyType)
@@ -333,6 +406,12 @@ namespace MultiAgentBridge
             error = null;
             return true;
         }   
+
+        private static string Capitalise(string path)
+        {
+            if (string.IsNullOrEmpty(path)) { return path; }
+            return char.ToUpper(path[0]) + path.Substring(1);
+        }
 
         private static SceneNode BuildNode(GameObject gameObject)
         {
