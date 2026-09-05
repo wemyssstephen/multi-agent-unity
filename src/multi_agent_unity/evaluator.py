@@ -20,7 +20,7 @@ def run_evaluator_once(scene: str, task: str, test_names: list, system_flag: str
 
     agent_result = asyncio.run(agent_loop_handler(task, system_flag))
     save_scene()
-    
+
     # Fail tests if Unity does not compile.
     compile_state = wait_for_compile()
     if compile_state != "ready":

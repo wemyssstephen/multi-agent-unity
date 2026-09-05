@@ -9,5 +9,5 @@ if __name__ == "__main__":
             "Write the script to Assets/MultiAgentBridge/Working/Scripts/. "
             "Use Sprites for the game by using the list_sprites tool. ")
     tests = ["MoveTest", "JumpTest", "WallCollideTest"]
-    
+
     print(run_evaluator_once("sidescroller_empty", task, tests, "s"))
