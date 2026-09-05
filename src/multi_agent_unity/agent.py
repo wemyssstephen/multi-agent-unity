@@ -48,7 +48,7 @@ async def run_agent(task: str, agent: Agent, mcp, sender) -> dict:
         "cache_creation_input_tokens": 0,
         }
 
-    for _ in range(10): # TODO: temporary testing cap
+    for _ in range(30): # TODO: temporary testing cap
         headers, body = agent_client.build_request_payload(messages, tools=agent.tools, model=agent.model, system=agent.system_prompt)
         response = sender(headers, body)
         stop_reason = agent_client.get_stop_reason(response)
