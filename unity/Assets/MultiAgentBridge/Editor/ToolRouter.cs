@@ -29,6 +29,7 @@ namespace MultiAgentBridge
             toolHandlers["create_script"] = CreateScript;
             toolHandlers["add_component"] = AddComponent;
             toolHandlers["assign_sprite"] = AssignSprite;
+            toolHandlers["list_sprites"] = ListSprites;
             toolHandlers["set_property"] = SetProperty;
             toolHandlers["create_primitive"] = CreatePrimitive;
             toolHandlers["read_scene"] = ReadScene;
@@ -191,11 +192,18 @@ namespace MultiAgentBridge
             var property = serialized.FindProperty("m_Sprite");
             property.objectReferenceValue = sprite;
             serialized.ApplyModifiedProperties();
-            
+
             if (!TrySaveScene()) { return "Failed to save scene"; }
             return $"Assigned sprite {p.SpritePath} to GameObject {go.name}";
         }
 
+        private static string ListSprites(JObject args)
+        {
+            var folder = "Assets/MultiAgentBridge/Scenes/Sprites";
+            var guids = AssetDatabase.FindAssets("t:Sprite", new[] { folder });
+            var paths = guids.Select(AssetDatabase.GUIDToAssetPath);
+            return string.Join("\n", paths);
+        }
         private static string SetProperty(JObject args)
         {
             var objectParams = args.ToObject<SetPropertyParams>();
@@ -346,8 +354,7 @@ namespace MultiAgentBridge
                     break;
 
                 case SerializedPropertyType.Vector3:
-                    var v = objectParams.Value.ToObject<float[]>();
-                    objectProperty.vector3Value = new Vector3(v[0], v[1], v[2]);
+                    objectProperty.vector3Value = ParseVector3(objectParams.Value);
                     break;
                 
                 case SerializedPropertyType.Color:
@@ -413,6 +420,18 @@ namespace MultiAgentBridge
             return char.ToUpper(path[0]) + path.Substring(1);
         }
 
+        private static Vector3 ParseVector3(JToken value)
+        {
+            if (value.Type == JTokenType.Array)
+            {
+                var v = value.ToObject<float[]>();
+                return new Vector3(v[0], v[1], v[2]);
+            }
+            return new Vector3(
+                value["x"].Value<float>(),
+                value["y"].Value<float>(),
+                value["z"].Value<float>());
+        }
         private static SceneNode BuildNode(GameObject gameObject)
         {
             SceneNode node = new SceneNode();

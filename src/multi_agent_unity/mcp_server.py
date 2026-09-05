@@ -56,6 +56,15 @@ def assign_sprite(game_object_id: str, sprite_path: str) -> str:
     return post(payload=payload)
 
 @mcp.tool()
+def list_sprites() -> str:
+    """Lists all available sprites in the project."""
+    payload =   {
+                    "Name": "list_sprites",
+                    "Args": {}
+                }
+    return post(payload=payload)
+
+@mcp.tool()
 def set_property(game_object_id: str,
                  component_type: str,
                  property_path: str,
