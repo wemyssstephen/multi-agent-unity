@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEditor.Compilation;
 using Unity.VisualScripting;
 
 namespace MultiAgentBridge
@@ -27,6 +28,7 @@ namespace MultiAgentBridge
             // Agent tools
             toolHandlers["create_gameobject"] = CreateGameObject;
             toolHandlers["create_script"] = CreateScript;
+            toolHandlers["create_file"] = CreateFile;
             toolHandlers["add_component"] = AddComponent;
             toolHandlers["assign_sprite"] = AssignSprite;
             toolHandlers["list_sprites"] = ListSprites;
@@ -39,6 +41,7 @@ namespace MultiAgentBridge
             // Evaluation tools
             toolHandlers["open_scene"] = OpenScene;
             toolHandlers["save_scene"] = SaveScene;
+            toolHandlers["check_compile"] = CheckCompile;
             toolHandlers["run_tests"] = TestRunner.RunTests;
             toolHandlers["poll_test_result"] = TestRunner.PollTestResult;
         }
@@ -117,6 +120,33 @@ namespace MultiAgentBridge
             }
             ForceUnityUpdate(correctedFilePath);
             return $"Created {correctedFilePath}";
+        }
+
+        private static string CreateFile(JObject args)
+        {
+            var p = args.ToObject<CreateFileParams>();
+            var fullPath = $"{WorkingScriptsRoot}/{p.FileName}";
+
+            if (p.FileName.EndsWith(".cs"))
+            {
+                return "Use create_script for C# scripts.";
+            }
+
+            if (!CheckInsideWorkingScriptsFolder(fullPath))
+            {
+                return $"Target path must be inside {WorkingScriptsRoot}: {p.FileName}";
+            }
+
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
+                File.WriteAllText(fullPath, p.ScriptContent);
+            }
+            catch (Exception e)
+            {
+                return $"Failed to create file: {e.Message}";
+            }
+            return $"Created {fullPath}";
         }
 
         private static string ReadScript(JObject args)
@@ -204,6 +234,7 @@ namespace MultiAgentBridge
             var paths = guids.Select(AssetDatabase.GUIDToAssetPath);
             return string.Join("\n", paths);
         }
+
         private static string SetProperty(JObject args)
         {
             var objectParams = args.ToObject<SetPropertyParams>();
@@ -273,7 +304,6 @@ namespace MultiAgentBridge
         private static void ForceUnityUpdate(string path)
         {
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-            // EditorApplication.QueuePlayerLoopUpdate();
         }
 
         private static bool TryResolveGameObject(string id, out GameObject gameObject, out string error)
@@ -323,6 +353,7 @@ namespace MultiAgentBridge
             try
             {
                 EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+                ForceUnityUpdate(path);
             }
             catch (Exception e)
             {
@@ -335,6 +366,13 @@ namespace MultiAgentBridge
         {
             if (!TrySaveScene()) { return "Failed to save scene"; }
             return "Saved scene";
+        }
+
+        private static string CheckCompile(JObject args)
+        {
+            if (CompilationCheck.IsCompiling) { return "compiling"; }
+            if (CompilationCheck.ErrorCount > 0) { return "errors"; }
+            return "ready";
         }
 
         private static bool CheckInsideWorkingScriptsFolder(string path)
@@ -432,6 +470,7 @@ namespace MultiAgentBridge
                 value["y"].Value<float>(),
                 value["z"].Value<float>());
         }
+
         private static SceneNode BuildNode(GameObject gameObject)
         {
             SceneNode node = new SceneNode();

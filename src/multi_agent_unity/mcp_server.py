@@ -2,7 +2,7 @@ from typing import Any
 
 from mcp.server import MCPServer
 
-from multi_agent_unity.unity_bridge_client import post, post_with_compile_retry
+from multi_agent_unity.unity_bridge_client import post, post_with_compile_retry, wait_for_compile
 
 mcp = MCPServer("Multi-Agent Unity Server", "1.0.0")
 BRIDGE_URL = "http://localhost:8080"
@@ -29,6 +29,20 @@ def create_script(script_name: str, target_path: str, script_content: str) -> st
                         "ScriptContent": script_content
                     }
                 }
+    result = post(payload=payload)
+    wait_for_compile()
+    return result
+
+@mcp.tool()
+def create_file(file_name: str, file_content: str) -> str:
+    """Creates a file with the given name, target path, and content."""
+    payload =   {
+                    "Name": "create_file",
+                    "Args": {
+                        "FileName": file_name,
+                        "FileContent": file_content
+                    }
+                }
     return post(payload=payload)
 
 @mcp.tool()
@@ -41,6 +55,7 @@ def add_component(game_object_id: str, component_type: str) -> str:
                         "ComponentType": component_type
                     }
                 }
+    wait_for_compile()
     return post_with_compile_retry(payload=payload)
 
 @mcp.tool()
@@ -82,7 +97,7 @@ def set_property(game_object_id: str,
                 }
     if reference_component_type:
         payload["Args"]["ReferenceComponentType"] = reference_component_type
-
+    wait_for_compile()
     return post_with_compile_retry(payload=payload)
 
 @mcp.tool()
