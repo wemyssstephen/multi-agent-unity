@@ -39,7 +39,9 @@ def reset_scene(scene: str) -> str:
     """Copy scene template to the working path and open it"""
     src = f"{PROJECT_ROOT}/{SCENE_TEMPLATES[scene]}"
     shutil.copy(src, f"unity/{WORKING_SCENE}")
-    return post({"Name": "open_scene", "Args": {"ScenePath": WORKING_SCENE}})
+    result = post({"Name": "open_scene", "Args": {"ScenePath": WORKING_SCENE}})
+    wait_for_compile()
+    return result
 
 def save_scene() -> str:
     return post({"Name": "save_scene", "Args": {}})
@@ -49,3 +51,19 @@ def run_tests(test_name: str) -> str:
 
 def poll_test_result() -> str:
     return post({"Name": "poll_test_result", "Args": {}})
+
+def check_compile() -> str:
+    return post({"Name": "check_compile", "Args": {}})
+
+def wait_for_compile(max_wait_time: int = 30) -> str:
+    """Waits for Unity to finish compiling scripts."""
+    time.sleep(1)  # Initial wait to allow Unity to start compiling
+    for _ in range(max_wait_time):
+        result = check_compile()
+        if result == "ready":
+            return "ready"
+        elif result == "errors":
+            return "errors"
+        time.sleep(1)
+    return "timeout"
+
