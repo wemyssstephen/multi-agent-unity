@@ -30,6 +30,7 @@ Thumbs.db
 # Ignore the entire Unity project except the bridge code
 /unity/*
 !/unity/Assets/
+!/unity/Scenes/
 /unity/Assets/*
 !/unity/Assets/MultiAgentBridge/
 !/unity/Assets/MultiAgentBridge/**
