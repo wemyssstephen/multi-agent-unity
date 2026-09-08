@@ -37,9 +37,21 @@ namespace MultiAgentBridge
         private class TestCallback : ICallbacks
         {
             public void RunStarted(ITestAdaptor testsToRun) { }
-            public void RunFinished(ITestResultAdaptor result) { testResult = result.ResultState; }
+            public void RunFinished(ITestResultAdaptor result) 
+            { 
+                if (testResult == null)
+                {
+                    testResult = "NoTestsRan";
+                }
+            }
             public void TestStarted(ITestAdaptor test) { }
-            public void TestFinished(ITestResultAdaptor result) { }
+            public void TestFinished(ITestResultAdaptor result)
+            {
+                if (!result.Test.IsSuite)
+                {
+                    testResult = result.ResultState;
+                }
+            }
         }
     }
 }
