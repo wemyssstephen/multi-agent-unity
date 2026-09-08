@@ -1,0 +1,85 @@
+[sidescroller.empty]
+task = """
+Create a simple side-scroller game with the following:
+A Player GameObject that moves and jumps controlled by a PlayerMover script
+containing a Move(Vector2 input) method that moves the Player in the direction
+of input and a Jump(Vector2 input) method that handles jumping. The Player
+needs a health field that decreases when it collides with the Wall.
+A Ground GameObject with collision for the Player to stand on.
+A Wall GameObject with collision that the Player cannot pass through. This must
+be placed to the right of the Player in the scene.
+A Goal GameObject the Player reaches to win.
+A LevelManager GameObject with a LevelManager script containing a winCondition
+field that becomes true when the Player reaches the Goal.
+Write all scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
+to the correct GameObjects. Use the list_sprites tool for any sprites you need.
+"""
+
+[sidescroller.populated]
+task = """
+Build on the existing side-scroller game in the scene so that it contains the
+following. The Player moves and jumps, controlled by a PlayerMover script
+containing a Move(Vector2 input) method that moves the Player in the direction
+of input and a Jump(Vector2 input) method that handles jumping. The Player
+needs a health field that decreases when it collides with the Wall. Also add:
+A Wall GameObject with collision that the Player cannot pass through. This must
+be placed to the right of the Player in the scene.
+A Goal GameObject the Player reaches to win.
+A LevelManager GameObject with a LevelManager script containing a winCondition
+field that becomes true when the Player reaches the Goal.
+Write any scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
+to the correct GameObjects. Use the list_sprites tool for any sprites you need.
+"""
+
+[topdown.empty]
+task = """
+Create a simple top-down game with the following:
+A Player GameObject that moves across the plane in the direction of input,
+controlled by a PlayerMover script containing a Move(Vector2 input) method that
+moves the Player in the direction of input. The Player needs a health field
+that decreases when it collides with the Wall.
+A Ground GameObject for the scene background.
+A Wall GameObject with collision that the Player cannot pass through. This must
+be placed to the right of the Player in the scene.
+A Goal GameObject the Player reaches to win.
+A LevelManager GameObject with a LevelManager script containing a winCondition
+field that becomes true when the Player reaches the Goal.
+Write all scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
+to the correct GameObjects. Use the list_sprites tool for any sprites you need.
+"""
+
+[topdown.populated]
+task = """
+Build on the existing top-down game in the scene so that it contains the
+following. The Player moves across the plane in the direction of input,
+controlled by a PlayerMover script containing a Move(Vector2 input) method that
+moves the Player in the direction of input. The Player needs a health field
+that decreases when it collides with the Wall. Also add:
+A Wall GameObject with collision that the Player cannot pass through. This must
+be placed to the right of the Player in the scene.
+A Goal GameObject the Player reaches to win.
+A LevelManager GameObject with a LevelManager script containing a winCondition
+field that becomes true when the Player reaches the Goal.
+Write any scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
+to the correct GameObjects. Use the list_sprites tool for any sprites you need.
+"""
+
+[tests]
+sidescroller = [
+    "SideScrollerPlayTest.MoveTest",
+    "SideScrollerPlayTest.PlayerGravityTest",
+    "SideScrollerPlayTest.JumpTest",
+    "SideScrollerPlayTest.WallCollideTest",
+    "SideScrollerPlayTest.WinConditionTest",
+    "SideScrollerPlayTest.HealthComponentTest",
+    "SideScrollerPlayTest.NonsenseTest",
+]
+topdown = [
+    "TopDownPlayTest.MoveTest",
+    "TopDownPlayTest.PlayerGravityTest",
+    "TopDownPlayTest.GroundIsBackgroundTest",
+    "TopDownPlayTest.WallCollideTest",
+    "TopDownPlayTest.WinConditionTest",
+    "TopDownPlayTest.HealthComponentTest",
+    "TopDownPlayTest.NonsenseTest",
+]
