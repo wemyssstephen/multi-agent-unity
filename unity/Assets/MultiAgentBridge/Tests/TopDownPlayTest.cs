@@ -6,7 +6,7 @@ using System;
 using System.Collections;
 using System.Reflection;
 
-public class SideScrollerPlayTest
+public class TopDownPlayTest
 {
     [UnitySetUp]
     public IEnumerator SetUp()
@@ -18,33 +18,18 @@ public class SideScrollerPlayTest
     public IEnumerator MoveTest()
     {
         GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break;}
+        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
 
         Component component = player.GetComponent("PlayerMover");
-        if (component == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break;}
+        if (component == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break; }
 
         MethodInfo move = component.GetType().GetMethod("Move", new[] { typeof(Vector2) });
         if (move == null) { Assert.Fail("Move(Vector2) method not found in PlayerMover component"); yield break; }
-        
-        // Right
-        Vector3 start = player.transform.position;
-        for (int i = 0; i < 10; i++)
-        {
-            yield return new WaitForFixedUpdate();
-            move.Invoke(component, new object[] { Vector2.right });
-            if (player.transform.position.x > start.x + 0.1f) break;
-        }
-        Assert.Greater(player.transform.position.x, start.x, "Player did not move right.");
 
-        // Left
-        Vector3 midpoint = player.transform.position;
-        for (int i = 0; i < 10; i++)
-        {
-            yield return new WaitForFixedUpdate();
-            move.Invoke(component, new object[] { Vector2.left });
-            if (player.transform.position.x < midpoint.x - 0.1f) break;
-        }
-        Assert.Less(player.transform.position.x, midpoint.x, "Player did not move left.");
+        yield return PlayerMoveHelper(player, component, move, Vector2.right, "right");
+        yield return PlayerMoveHelper(player, component, move, Vector2.left,  "left");
+        yield return PlayerMoveHelper(player, component, move, Vector2.up,    "up");
+        yield return PlayerMoveHelper(player, component, move, Vector2.down,  "down");
     }
 
     [UnityTest]
@@ -54,45 +39,22 @@ public class SideScrollerPlayTest
         if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
 
         Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
-        if (rb == null) { Assert.Fail("Side-scroller Player has no Rigidbody2D, so it cannot fall under gravity."); yield break; }
-
-        Assert.Greater(rb.gravityScale, 0f, "Side-scroller Player has a Rigidbody2D but gravity is disabled.");
+        if (rb != null)
+        {
+            Assert.AreEqual(0f, rb.gravityScale, "Top-down Player has a Rigidbody2D with gravity enabled; it will fall.");
+        }
         yield return null;
     }
 
     [UnityTest]
-    public IEnumerator JumpTest()
+    public IEnumerator GroundIsBackgroundTest()
     {
-        GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
+        GameObject ground = GameObject.Find("Ground");
+        if (ground == null) { Assert.Fail("Ground GameObject not found in the scene."); yield break; }
 
-        Component component = player.GetComponent("PlayerMover");
-        if (component == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break; }
-
-        MethodInfo move = component.GetType().GetMethod("Jump", new[] { typeof(Vector2) });
-        if (move == null) { Assert.Fail("Jump(Vector2) method not found in PlayerMover component"); yield break; }
-
-        Vector3 start = player.transform.position;
-        float peakY = start.y;
-        bool hasJumped = false;
-        bool landed = false;
-
-        move.Invoke(component, new object[] { Vector2.up });
-        
-        for (int i = 0; i < 300; i++)
-        {
-            yield return new WaitForFixedUpdate(); // Wait for the physics update
-            Vector3 currentPosition = player.transform.position;
-            if (currentPosition.y > peakY) peakY = currentPosition.y; // Update peakY if the player has jumped higher
-            if (currentPosition.y > start.y + 0.1f) hasJumped = true; // Check if the player has jumped
-            if (hasJumped && currentPosition.y <= start.y + 0.1f) { landed = true; break; } // Check if the player has landed
-        }
-
-        Vector3 end = player.transform.position;
-
-        Assert.IsTrue(hasJumped, "Player did not jump as expected.");
-        Assert.IsTrue(landed, "Player did not land back on the ground as expected.");
-        Assert.AreEqual(start.x, end.x, 0.01f, "Player x drifted.");
+        Collider2D collider = ground.GetComponent<Collider2D>();
+        Assert.IsNull(collider, "Ground should be background only and have no collider, but a Collider2D was found.");
+        yield return null;
     }
 
     [UnityTest]
@@ -108,15 +70,14 @@ public class SideScrollerPlayTest
         if (component == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break; }
 
         MethodInfo move = component.GetType().GetMethod("Move", new[] { typeof(Vector2) });
-        if (move == null) { Assert.Fail("Move(Vector2) method not found in PlayerMover component."); yield break;}
+        if (move == null) { Assert.Fail("Move(Vector2) method not found in PlayerMover component."); yield break; }
 
         Vector3 wallPosition = wall.transform.position;
         Vector3 playerStart = player.transform.position;
 
-        // Move the player towards the wall
         for (int i = 0; i < 100; i++)
         {
-            yield return new WaitForFixedUpdate(); // Wait for the physics update
+            yield return new WaitForFixedUpdate();
             move.Invoke(component, new object[] { Vector2.right });
         }
 
@@ -145,12 +106,11 @@ public class SideScrollerPlayTest
         if (readHealth == null) { Assert.Fail("Health field or property not found in Player components."); yield break; }
         float startHealth = readHealth();
 
-        // Move the player towards the wall
         for (int i = 0; i < 100; i++)
         {
-            yield return new WaitForFixedUpdate(); // Wait for the physics update
+            yield return new WaitForFixedUpdate();
             move.Invoke(component, new object[] { Vector2.right });
-            if (readHealth() < startHealth) { break; } // Exit early if health has decreased
+            if (readHealth() < startHealth) { break; }
         }
 
         Assert.Less(readHealth(), startHealth, "Player health did not decrease after colliding with the wall.");
@@ -164,7 +124,7 @@ public class SideScrollerPlayTest
 
         Component mover = player.GetComponent("PlayerMover");
         if (mover == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break; }
-        
+
         MethodInfo move = mover.GetType().GetMethod("Move", new[] { typeof(Vector2) });
         if (move == null) { Assert.Fail("Move(Vector2) method not found in PlayerMover component."); yield break; }
 
@@ -180,13 +140,14 @@ public class SideScrollerPlayTest
         var winCondition = GetWinCondition(levelManager);
         if (winCondition == null) { Assert.Fail("winCondition field not found in LevelManager component."); yield break; }
 
-        Vector2 direction = goal.transform.position.x > player.transform.position.x ? Vector2.right : Vector2.left;
+        Vector3 toGoal = goal.transform.position - player.transform.position;
+        Vector2 direction = new Vector2(toGoal.x, toGoal.y).normalized;
 
         for (int i = 0; i < 200; i++)
         {
-            yield return new WaitForFixedUpdate(); // Wait for the physics update
+            yield return new WaitForFixedUpdate();
             move.Invoke(mover, new object[] { direction });
-            if (winCondition()) break; 
+            if (winCondition()) break;
         }
 
         Assert.IsTrue(winCondition(), "Player did not reach the goal and trigger the win condition.");
@@ -217,4 +178,21 @@ public class SideScrollerPlayTest
         }
         return null;
     }
+
+    IEnumerator PlayerMoveHelper(GameObject player, Component component, MethodInfo move,
+                                Vector2 direction, string label)
+    {
+        Vector3 start = player.transform.position;
+        for (int i = 0; i < 10; i++)
+        {
+            yield return new WaitForFixedUpdate();
+            move.Invoke(component, new object[] { direction });
+            Vector2 travelled = player.transform.position - start;
+            if (Vector2.Dot(travelled, direction) > 0.1f) break;
+        }
+
+        Vector2 moved = player.transform.position - start;
+        Assert.Greater(Vector2.Dot(moved, direction), 0f, $"Player did not move {label}.");
+    }
+
 }
