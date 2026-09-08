@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from multi_agent_unity.agent import agent_loop_handler
-from multi_agent_unity.unity_bridge_client import poll_test_result, reset_scene, run_tests, save_scene, request_compile, refresh_database, wait_for_compile
+from multi_agent_unity.unity_bridge_client import poll_test_result, refresh_database, request_compile, reset_scene, run_tests, save_scene, wait_for_compile
 
 WORKING_SCRIPTS = Path("unity/Assets/MultiAgentBridge/Working/Scripts")
 SCENE_SCRIPTS = Path("unity/Scenes/SceneScripts")
@@ -13,7 +13,7 @@ def wipe_scripts() -> None:
     if WORKING_SCRIPTS.exists():
         shutil.rmtree(WORKING_SCRIPTS)
     WORKING_SCRIPTS.mkdir(parents=True)
-    
+
 def copy_scene_scripts(scene: str) -> None:
     scene_dir = SCENE_SCRIPTS / scene
     if not scene_dir.exists():
