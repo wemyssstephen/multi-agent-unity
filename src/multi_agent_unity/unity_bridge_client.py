@@ -52,8 +52,14 @@ def run_tests(test_name: str) -> str:
 def poll_test_result() -> str:
     return post({"Name": "poll_test_result", "Args": {}})
 
+def request_compile() -> str:
+    return post({"Name": "request_compile", "Args": {}})
+
 def check_compile() -> str:
     return post({"Name": "check_compile", "Args": {}})
+
+def refresh_database() -> str:
+    return post({"Name": "refresh_database", "Args": {}})
 
 def wait_for_compile(max_wait_time: int = 30) -> str:
     """Waits for Unity to finish compiling scripts."""

@@ -41,7 +41,9 @@ namespace MultiAgentBridge
             // Evaluation tools
             toolHandlers["open_scene"] = OpenScene;
             toolHandlers["save_scene"] = SaveScene;
+            toolHandlers["request_compile"] = RequestCompile;
             toolHandlers["check_compile"] = CheckCompile;
+            toolHandlers["refresh_database"] = RefreshDatabase;
             toolHandlers["run_tests"] = TestRunner.RunTests;
             toolHandlers["poll_test_result"] = TestRunner.PollTestResult;
         }
@@ -368,11 +370,23 @@ namespace MultiAgentBridge
             return "Saved scene";
         }
 
+        private static string RequestCompile(JObject args)
+        {
+            CompilationPipeline.RequestScriptCompilation();
+            return "compiling";
+        }
+
         private static string CheckCompile(JObject args)
         {
             if (CompilationCheck.IsCompiling) { return "compiling"; }
             if (CompilationCheck.ErrorCount > 0) { return "errors"; }
             return "ready";
+        }
+
+        private static string RefreshDatabase(JObject args)
+        {
+            AssetDatabase.Refresh();
+            return "refreshed";
         }
 
         private static bool CheckInsideWorkingScriptsFolder(string path)
@@ -441,6 +455,21 @@ namespace MultiAgentBridge
                         }
                         
                         objectProperty.objectReferenceValue = comp;
+                    }
+                    break;
+                
+                case SerializedPropertyType.Enum:
+                    var enumType = FindComponentType(objectParams.ComponentType)
+                        ?.GetProperty(objectParams.PropertyPath)?.PropertyType;
+
+                    if (objectParams.Value.Type == JTokenType.Integer || enumType == null)
+                    {
+                        objectProperty.intValue = objectParams.Value.Value<int>();
+                    }
+                    else
+                    {
+                        objectProperty.intValue = Convert.ToInt32(
+                        Enum.Parse(enumType, objectParams.Value.Value<string>(), true));
                     }
                     break;
                 
