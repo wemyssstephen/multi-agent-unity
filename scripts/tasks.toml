@@ -1,7 +1,7 @@
 [sidescroller.empty]
 task = """
 Create a simple side-scroller game with the following:
-A Player GameObject that moves and jumps controlled by a PlayerMover script
+A Player GameObject that moves and jumps, controlled by a PlayerMover script
 containing a Move(Vector2 input) method that moves the Player in the direction
 of input and a Jump(Vector2 input) method that handles jumping. The Player
 needs a health field that decreases when it collides with the Wall.
@@ -13,6 +13,9 @@ A LevelManager GameObject with a LevelManager script containing a winCondition
 field that becomes true when the Player reaches the Goal.
 Write all scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
 to the correct GameObjects. Use the list_sprites tool for any sprites you need.
+The game will be evaluated both by automated tests calling your methods directly 
+and by a human playing it, so the player must be controllable and your movement 
+methods must work when called externally.
 """
 
 [sidescroller.populated]
@@ -29,6 +32,9 @@ A LevelManager GameObject with a LevelManager script containing a winCondition
 field that becomes true when the Player reaches the Goal.
 Write any scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
 to the correct GameObjects. Use the list_sprites tool for any sprites you need.
+The game will be evaluated both by automated tests calling your methods directly 
+and by a human playing it, so the player must be controllable and your movement 
+methods must work when called externally.
 """
 
 [topdown.empty]
@@ -46,6 +52,9 @@ A LevelManager GameObject with a LevelManager script containing a winCondition
 field that becomes true when the Player reaches the Goal.
 Write all scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
 to the correct GameObjects. Use the list_sprites tool for any sprites you need.
+The game will be evaluated both by automated tests calling your methods directly 
+and by a human playing it, so the player must be controllable and your movement 
+methods must work when called externally.
 """
 
 [topdown.populated]
@@ -62,6 +71,9 @@ A LevelManager GameObject with a LevelManager script containing a winCondition
 field that becomes true when the Player reaches the Goal.
 Write any scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
 to the correct GameObjects. Use the list_sprites tool for any sprites you need.
+The game will be evaluated both by automated tests calling your methods directly 
+and by a human playing it, so the player must be controllable and your movement 
+methods must work when called externally.
 """
 
 [tests]
