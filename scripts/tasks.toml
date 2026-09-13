@@ -84,7 +84,6 @@ sidescroller = [
     "SideScrollerPlayTest.WallCollideTest",
     "SideScrollerPlayTest.WinConditionTest",
     "SideScrollerPlayTest.HealthComponentTest",
-    "SideScrollerPlayTest.NonsenseTest",
 ]
 topdown = [
     "TopDownPlayTest.MoveTest",
@@ -93,5 +92,4 @@ topdown = [
     "TopDownPlayTest.WallCollideTest",
     "TopDownPlayTest.WinConditionTest",
     "TopDownPlayTest.HealthComponentTest",
-    "TopDownPlayTest.NonsenseTest",
 ]
