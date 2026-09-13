@@ -183,6 +183,7 @@ public class TopDownPlayTest
                                 Vector2 direction, string label)
     {
         Vector3 start = player.transform.position;
+        var rb = player.GetComponent<Rigidbody2D>();
         for (int i = 0; i < 10; i++)
         {
             yield return new WaitForFixedUpdate();
@@ -192,7 +193,22 @@ public class TopDownPlayTest
         }
 
         Vector2 moved = player.transform.position - start;
-        Assert.Greater(Vector2.Dot(moved, direction), 0f, $"Player did not move {label}.");
+        if (Vector2.Dot(moved, direction) > 0.1f) { yield break; }
+
+        // Try to find a velocity stomp from a broken Move()
+        if (rb != null)
+        {
+            move.Invoke(component, new object[] { direction });
+            float justSet = rb.linearVelocity.magnitude;
+            yield return new WaitForFixedUpdate();
+            float afterFrame = rb.linearVelocity.magnitude;
+
+            if (justSet > 0.01f && afterFrame < 0.01f)
+            {
+                Assert.Fail($"Player did not move {label} and Move() seems to be resetting velocity each frame.");
+            }
+        }
+        Assert.Greater(Vector2.Dot(moved, direction), 0.1f, $"Player did not move {label}.");
     }
 
 }

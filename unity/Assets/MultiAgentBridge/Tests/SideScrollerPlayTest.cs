@@ -26,25 +26,8 @@ public class SideScrollerPlayTest
         MethodInfo move = component.GetType().GetMethod("Move", new[] { typeof(Vector2) });
         if (move == null) { Assert.Fail("Move(Vector2) method not found in PlayerMover component"); yield break; }
         
-        // Right
-        Vector3 start = player.transform.position;
-        for (int i = 0; i < 10; i++)
-        {
-            yield return new WaitForFixedUpdate();
-            move.Invoke(component, new object[] { Vector2.right });
-            if (player.transform.position.x > start.x + 0.1f) break;
-        }
-        Assert.Greater(player.transform.position.x, start.x, "Player did not move right.");
-
-        // Left
-        Vector3 midpoint = player.transform.position;
-        for (int i = 0; i < 10; i++)
-        {
-            yield return new WaitForFixedUpdate();
-            move.Invoke(component, new object[] { Vector2.left });
-            if (player.transform.position.x < midpoint.x - 0.1f) break;
-        }
-        Assert.Less(player.transform.position.x, midpoint.x, "Player did not move left.");
+        yield return PlayerMoveHelper(player, component, move, Vector2.right, "right");
+        yield return PlayerMoveHelper(player, component, move, Vector2.left,  "left");
     }
 
     [UnityTest]
@@ -216,5 +199,37 @@ public class SideScrollerPlayTest
             if (property != null) { return () => Convert.ToSingle(property.GetValue(component)); }
         }
         return null;
+    }
+
+        IEnumerator PlayerMoveHelper(GameObject player, Component component, MethodInfo move,
+                                Vector2 direction, string label)
+    {
+        Vector3 start = player.transform.position;
+        var rb = player.GetComponent<Rigidbody2D>();
+        for (int i = 0; i < 10; i++)
+        {
+            yield return new WaitForFixedUpdate();
+            move.Invoke(component, new object[] { direction });
+            Vector2 travelled = player.transform.position - start;
+            if (Vector2.Dot(travelled, direction) > 0.1f) break;
+        }
+
+        Vector2 moved = player.transform.position - start;
+        if (Vector2.Dot(moved, direction) > 0.1f) { yield break; }
+
+        // Try to find a velocity stomp from a broken Move()
+        if (rb != null)
+        {
+            move.Invoke(component, new object[] { direction });
+            float justSet = rb.linearVelocity.magnitude;
+            yield return new WaitForFixedUpdate();
+            float afterFrame = rb.linearVelocity.magnitude;
+
+            if (justSet > 0.01f && afterFrame < 0.01f)
+            {
+                Assert.Fail($"Player did not move {label} and Move() seems to be resetting velocity each frame.");
+            }
+        }
+        Assert.Greater(Vector2.Dot(moved, direction), 0.1f, $"Player did not move {label}.");
     }
 }
