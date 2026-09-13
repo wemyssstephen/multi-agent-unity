@@ -1,3 +1,4 @@
+import logging
 import shutil
 import time
 
@@ -15,12 +16,19 @@ SCENE_TEMPLATES = {
 PROJECT_ROOT = "unity"
 WORKING_SCENE = "Assets/MultiAgentBridge/Working/current.unity"
 
+log = logging.getLogger("bridge")
+_session = requests.Session()
+
 def post(payload: dict, timeout: int = 30) -> str:
-    try:
-        response = requests.post(BRIDGE_URL, json=payload, timeout=timeout)
-    except requests.exceptions.Timeout:
-        return "Unity bridge timed out. Unity might be busy or has crashed."
-    return response.text
+    for _ in range(30):
+        try:
+            response = _session.post(BRIDGE_URL, json=payload, timeout=timeout)
+            return response.text
+        except requests.exceptions.Timeout:
+            return "Unity bridge timed out. Unity might be busy or has crashed."
+        except requests.exceptions.ConnectionError:
+            time.sleep(1)
+    return "Unity bridge unreachable after retrying."
 
 def post_with_compile_retry(payload: dict) -> str:
     # "Failed to find component type" means the script hasn't compiled yet.
@@ -41,35 +49,54 @@ def reset_scene(scene: str) -> str:
     shutil.copy(src, f"unity/{WORKING_SCENE}")
     result = post({"Name": "open_scene", "Args": {"ScenePath": WORKING_SCENE}})
     wait_for_compile()
+    log.info("reset_scene -> %s", result)
     return result
 
 def save_scene() -> str:
-    return post({"Name": "save_scene", "Args": {}})
+    result = post({"Name": "save_scene", "Args": {}})
+    log.info("save_scene -> %s", result)
+    return result
 
 def run_tests(test_name: str) -> str:
-    return post({"Name": "run_tests", "Args": {"TestName": test_name}})
+    result = post({"Name": "run_tests", "Args": {"TestName": test_name}})
+    log.info("run_tests -> %s", result)
+    return result
 
 def poll_test_result() -> str:
     return post({"Name": "poll_test_result", "Args": {}})
 
 def request_compile() -> str:
-    return post({"Name": "request_compile", "Args": {}})
+    result = post({"Name": "request_compile", "Args": {}})
+    log.info("request_compile -> %s", result)
+    return result
 
 def check_compile() -> str:
     return post({"Name": "check_compile", "Args": {}})
 
 def refresh_database() -> str:
-    return post({"Name": "refresh_database", "Args": {}})
+    result = post({"Name": "refresh_database", "Args": {}})
+    log.info("refresh_database -> %s", result)
+    return result
 
 def wait_for_compile(max_wait_time: int = 30) -> str:
     """Waits for Unity to finish compiling scripts."""
+    log.info("Waiting for Unity to start compiling...")
     time.sleep(1)  # Initial wait to allow Unity to start compiling
     for _ in range(max_wait_time):
-        result = check_compile()
+        try:
+            result = check_compile()
+        except requests.exceptions.ConnectionError:
+            log.info("Connection error... waiting...")
+            time.sleep(1)
+            continue
+
         if result == "ready":
+            log.info("Compile successful...")
             return "ready"
         elif result == "errors":
+            log.warning("wait_for_compile -> errors")
             return "errors"
         time.sleep(1)
+    log.warning("wait_for_compile -> timeout")
     return "timeout"
 
