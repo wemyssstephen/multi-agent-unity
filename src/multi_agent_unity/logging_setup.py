@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 
 def setup_logging(console_level=logging.INFO,  file_level=logging.DEBUG, logfile: str | None = None):
@@ -14,10 +15,11 @@ def setup_logging(console_level=logging.INFO,  file_level=logging.DEBUG, logfile
     root.addHandler(console_handler)
 
     if logfile:
+        Path(logfile).parent.mkdir(parents=True, exist_ok=True)
         file_handler = logging.FileHandler(logfile)
         file_handler.setLevel(file_level)
         file_handler.setFormatter(format)
         root.addHandler(file_handler)
-        
+
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("charset_normalizer").setLevel(logging.WARNING)
