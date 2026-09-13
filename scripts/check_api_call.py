@@ -2,6 +2,8 @@ import tomllib
 from pathlib import Path
 
 from multi_agent_unity.evaluator import run_evaluator_once
+from multi_agent_unity.logging_setup import setup_logging
+from multi_agent_unity.unity_launcher import launch_unity_headless, wait_for_bridge
 
 TASKS_PATH = Path(__file__).parent / "tasks.toml"
 
@@ -19,9 +21,15 @@ def get_task(data, genre, scene):
 
 
 if __name__ == "__main__":
+    setup_logging(logfile="run.log")
+    headless = launch_unity_headless()
+    if not wait_for_bridge():
+        raise RuntimeError("Unity bridge did not start.")
+
+
     data = load_tasks()
 
-    genre = "topdown"      # "sidescroller" | "topdown"
+    genre = "topdown"           # "sidescroller" | "topdown"
     scene = "populated"         # "empty" | "populated"
     system = "s"                # "s" | "m"
 
@@ -29,4 +37,7 @@ if __name__ == "__main__":
     tests = data["tests"][genre]
     scene_name = f"{genre}_{scene}"
 
-    print(run_evaluator_once(scene_name, task, tests, system))
+    try:
+        print(run_evaluator_once(scene_name, task, tests, system))
+    finally:
+        headless.terminate()
