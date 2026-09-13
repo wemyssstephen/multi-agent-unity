@@ -1,8 +1,8 @@
 import tomllib
 from pathlib import Path
 
-from multi_agent_unity.scene_manager import run_evaluator_once
 from multi_agent_unity.logging_setup import setup_logging
+from multi_agent_unity.scene_manager import run_evaluator_once
 from multi_agent_unity.unity_launcher import launch_unity_headless, wait_for_bridge
 
 TASKS_PATH = Path(__file__).parent / "tasks.toml"

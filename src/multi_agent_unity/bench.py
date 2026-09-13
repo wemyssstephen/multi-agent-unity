@@ -6,11 +6,16 @@ from datetime import datetime
 from pathlib import Path
 
 from multi_agent_unity.agent import agent_loop_handler
-from multi_agent_unity.scene_manager import prepare_scene
 from multi_agent_unity.logging_setup import setup_logging
+from multi_agent_unity.scene_manager import prepare_scene
 from multi_agent_unity.tasks import get_task, get_tests
 from multi_agent_unity.unity_bridge_client import (
-    poll_test_result, request_compile, run_tests, save_scene, wait_for_compile, quit_unity,
+    poll_test_result,
+    quit_unity,
+    request_compile,
+    run_tests,
+    save_scene,
+    wait_for_compile,
 )
 from multi_agent_unity.unity_launcher import launch_unity_headless, wait_for_bridge
 
@@ -45,6 +50,7 @@ class Bench:
                             out.flush()
         finally:
             quit_unity()
+            proc.terminate() # TODO: actually implement Unity quitting
 
     def score(self, genre, condition, scene, system):
         prepare_scene(scene)
