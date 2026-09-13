@@ -30,10 +30,19 @@ namespace MultiAgentBridge
         /// <param name="job">Work to run on the main thread; its result is stored.</param>
         public static void EnqueueJob(string jobId, Func<string> job)
         {
-            jobsQueue.Enqueue(() =>
+            jobsQueue.Enqueue(() => 
             {
-                var result = job();
-                jobsResults.TryAdd(jobId, result);
+                string result;
+                try
+                {
+                    result = job();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[JobQueue] job {jobId} threw: {e}");
+                    result = BuildError($"{e.GetType().Name}: {e.Message}", jobId);
+                }
+                jobsResults[jobId] = result;           
             });
         }
         /// <summary>
@@ -49,13 +58,30 @@ namespace MultiAgentBridge
             return null;
         }
 
+        public static string BuildError(string message, string id)
+        {
+            return JsonUtility.ToJson(new ErrorPayload { error = message, id = id });
+        }
+
+        [Serializable]
+        private struct ErrorPayload
+        {
+            public string error;
+            public string id;
+        }
+
         private static void Tick()
         {
-            // TODO: job() has no try/catch — one throwing job kills the pump (breaks out of Tick).
-            // Wrap so a failed job records an error result instead. Errors should carry context for the caller.
             while (jobsQueue.TryDequeue(out var job))
             {
-                job();
+                try
+                {
+                    job();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Tick caught an unexpected exception {e}");
+                }
             }
         }
     }

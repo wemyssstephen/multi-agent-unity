@@ -15,7 +15,10 @@ namespace MultiAgentBridge
     [InitializeOnLoad]
     public static class HttpBridge
     {
-
+        
+        private const int Port = 8080;
+        private const int HandlerTimeOut = 120000;
+        private const int PollSleep = 50;
         private static readonly HttpListener listener = new();
 
         static HttpBridge()
@@ -26,21 +29,15 @@ namespace MultiAgentBridge
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
 
             // HttpListener running on a background thread
-            var t = new Thread(() =>
-            {
-                RunListener();
-            })
-            {
-                IsBackground = true
-            };
+            var t = new Thread(RunListener) { IsBackground = true };
             t.Start();
         }
 
         private static void RunListener()
         {
-            listener.Prefixes.Add("http://localhost:8080/");
+            listener.Prefixes.Add($"http://localhost:{Port}/");
             listener.Start();
-            Debug.Log("Listening for HTTP requests on http://localhost:8080/");
+            Debug.Log($"Listening for HTTP requests on http://localhost:{Port}/");
 
             try
             {
@@ -65,12 +62,19 @@ namespace MultiAgentBridge
 
                         JobQueue.EnqueueJob(jobId, () => ToolRouter.RunTool(requestBody));
 
-                        // TODO: No timeout. Add one once handlers can fail to return. Otherwise, a failed handler will block the listener forever.
-                        while (pollResult == null)
+                        // Bounded wait until the main thread records a result or the deadline passes.
+                        var deadline = DateTime.UtcNow.AddMilliseconds(HandlerTimeOut);
+                        while (pollResult == null && DateTime.UtcNow < deadline)
                         {
                             pollResult = JobQueue.PollJobResult(jobId);
-                            if (pollResult == null) { Thread.Sleep(50); }
-                            ; // Sleep for a short duration to avoid busy waiting
+                            if (pollResult == null) { Thread.Sleep(PollSleep); }
+                        }
+
+                        // If deadline passes, log an error.
+                        if (pollResult == null)
+                        {
+                            Debug.LogWarning($"[HttpBridge] job {jobId} timed out after {HandlerTimeOut}ms");
+                            pollResult = JobQueue.BuildError("job timeout on Unity main thread", jobId);
                         }
 
                         byte[] buffer = Encoding.UTF8.GetBytes(pollResult);
