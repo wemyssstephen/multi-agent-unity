@@ -23,6 +23,7 @@ def wait_for_bridge(timeout=120) -> bool:
 
 def launch_unity_headless() -> subprocess.Popen:
     """Launch Unity headless with the bridge, logging to a known path."""
+    UNITY_LOG.write_text("")
     args = [
         str(UNITY_EXE),
         "-batchmode",
