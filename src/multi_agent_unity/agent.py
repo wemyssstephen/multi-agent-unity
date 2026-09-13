@@ -19,7 +19,7 @@ def accumulate_tokens(usage_totals: dict, usage: dict) -> None:
     usage_totals["cache_read_input_tokens"] += usage["cache_read_input_tokens"]
     usage_totals["cache_creation_input_tokens"] += usage["cache_creation_input_tokens"]
 
-async def agent_loop_handler(task: str, system_flag, model="claude-haiku-4-5-20251001", sender=agent_client.send_request) -> dict:
+async def agent_loop_handler(task: str, system_flag, model="claude-haiku-4-5-20251001", max_iterations=30, sender=agent_client.send_request) -> dict:
     """Handles agent loops"""
     async with Client(stdio_client(server_params)) as mcp:
         # Find the tools available on the server.
@@ -34,19 +34,19 @@ async def agent_loop_handler(task: str, system_flag, model="claude-haiku-4-5-202
             # Run multi-agent loop
             log.info("Running multi-agent loop...")
             agent = OrchestratorAgent.make(model, anthropic_tools)
-            return await run_agent(task, agent, mcp, sender)
+            return await run_agent(task, agent, mcp, sender, max_iterations)
 
         elif system_flag == "s":
             # Run single-agent loop
             log.info("Running single-agent loop...")
             agent = SingleAgent.make(model, anthropic_tools)
-            return await run_agent(task, agent, mcp, sender)
+            return await run_agent(task, agent, mcp, sender, max_iterations)
 
         else:
             # Report that system flag is wrong
             raise ValueError("System flag is wrong. Use 'm' for multi-agent or 's' for single-agent.")
 
-async def run_agent(task: str, agent: Agent, mcp, sender) -> dict:
+async def run_agent(task: str, agent: Agent, mcp, sender, max_iterations) -> dict:
     """Main loop for an agent. Task is plain English 'Make a Cube'. """
     messages = [{"role": "user", "content": task}]
     usage_totals = {
@@ -61,9 +61,7 @@ async def run_agent(task: str, agent: Agent, mcp, sender) -> dict:
     tool_calls_by_name = {}
     iteration_cap = False
 
-    max_iterations = 30
-
-    for i in range(max_iterations): # TODO: temporary testing cap
+    for i in range(max_iterations):
         iterations = i + 1
 
         headers, body = agent_client.build_request_payload(messages, tools=agent.tools, model=agent.model, system=agent.system_prompt)
@@ -82,7 +80,7 @@ async def run_agent(task: str, agent: Agent, mcp, sender) -> dict:
                 if call["name"] in agent.worker_names:
                     worker = agent.build_worker(call["name"])
                     log.info("%s delegating -> %s", agent.name, call["name"])
-                    result = await run_agent(call["input"]["task"], worker, mcp, sender)
+                    result = await run_agent(call["input"]["task"], worker, mcp, sender, max_iterations)
                     result_text = result["text"]
                     accumulate_tokens(usage_totals, result)
 
