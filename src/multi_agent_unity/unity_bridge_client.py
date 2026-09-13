@@ -26,7 +26,7 @@ def post(payload: dict, timeout: int = 30) -> str:
             return response.text
         except requests.exceptions.Timeout:
             return "Unity bridge timed out. Unity might be busy or has crashed."
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, TimeoutError):
             time.sleep(1)
     return "Unity bridge unreachable after retrying."
 
