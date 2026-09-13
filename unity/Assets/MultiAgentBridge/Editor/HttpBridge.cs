@@ -62,19 +62,15 @@ namespace MultiAgentBridge
 
                         JobQueue.EnqueueJob(jobId, () => ToolRouter.RunTool(requestBody));
 
-                        // Bounded wait until the main thread records a result or the deadline passes.
-                        var deadline = DateTime.UtcNow.AddMilliseconds(HandlerTimeOut);
-                        while (pollResult == null && DateTime.UtcNow < deadline)
+                        while (pollResult == null)
                         {
                             pollResult = JobQueue.PollJobResult(jobId);
                             if (pollResult == null) { Thread.Sleep(PollSleep); }
                         }
 
-                        // If deadline passes, log an error.
                         if (pollResult == null)
                         {
-                            Debug.LogWarning($"[HttpBridge] job {jobId} timed out after {HandlerTimeOut}ms");
-                            pollResult = JobQueue.BuildError("job timeout on Unity main thread", jobId);
+                            Thread.Sleep(50);
                         }
 
                         byte[] buffer = Encoding.UTF8.GetBytes(pollResult);

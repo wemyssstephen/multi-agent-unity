@@ -30,19 +30,10 @@ namespace MultiAgentBridge
         /// <param name="job">Work to run on the main thread; its result is stored.</param>
         public static void EnqueueJob(string jobId, Func<string> job)
         {
-            jobsQueue.Enqueue(() => 
+            jobsQueue.Enqueue(() =>
             {
-                string result;
-                try
-                {
-                    result = job();
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"[JobQueue] job {jobId} threw: {e}");
-                    result = BuildError($"{e.GetType().Name}: {e.Message}", jobId);
-                }
-                jobsResults[jobId] = result;           
+                var result = job();
+                jobsResults.TryAdd(jobId, result);    
             });
         }
         /// <summary>
@@ -74,14 +65,7 @@ namespace MultiAgentBridge
         {
             while (jobsQueue.TryDequeue(out var job))
             {
-                try
-                {
-                    job();
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"Tick caught an unexpected exception {e}");
-                }
+                job();
             }
         }
     }
