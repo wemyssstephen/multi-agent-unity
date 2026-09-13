@@ -100,3 +100,10 @@ def wait_for_compile(max_wait_time: int = 30) -> str:
     log.warning("wait_for_compile -> timeout")
     return "timeout"
 
+def quit_unity() -> str:
+    """Ask Unity to exit"""
+    try:
+        _session.post(BRIDGE_URL, json={"Name": "quit", "Args": {}}, timeout=5)
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        return "Unity exiting (connection dropped)"
+
