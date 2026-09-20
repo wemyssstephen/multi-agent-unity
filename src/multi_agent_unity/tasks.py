@@ -14,7 +14,7 @@ def get_task(genre: str, condition: str) -> str:
     try:
         raw = _load()[genre][condition]["task"]
     except KeyError:
-        raise KeyError(f"no task [{genre}.{condition} in {TASKS_FILE}]")
+        raise KeyError(f"no task [{genre}.{condition}] in {TASKS_FILE}")
     return " ".join(raw.split())
 
 def get_tests(genre: str) -> list[str]:
