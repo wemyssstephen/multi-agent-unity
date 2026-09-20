@@ -22,7 +22,7 @@ class SingleAgent(Agent):
     name = "single_agent"
     system_prompt = "You receive a plain-language Unity task that you must complete."
     tool_names = ["create_gameobject", "create_script", "create_file", "add_component",
-                  "assign_sprite", "list_sprites", "set_property", #"create_primitive",
+                  "list_scripts", "assign_sprite", "list_sprites", "set_property",
                   "read_scene", "read_script", "read_console"]
 
 class OrchestratorAgent(Agent):
@@ -63,7 +63,7 @@ class SceneAgent(Agent):
 
 class ScriptAgent(Agent):
     name = "script_agent"
-    tool_names = ["create_script", "create_file", "read_script"]
+    tool_names = ["create_script", "list_scripts", "create_file", "read_script"]
 
 class ConsoleAgent(Agent):
     name = "console_agent"
