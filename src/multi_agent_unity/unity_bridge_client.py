@@ -4,6 +4,8 @@ import time
 
 import requests
 
+from multi_agent_unity.exceptions import BridgeTimeout
+
 BRIDGE_URL = "http://localhost:8080"
 
 SCENE_TEMPLATES = {
@@ -24,9 +26,9 @@ def post(payload: dict, timeout: int = 30) -> str:
         try:
             response = _session.post(BRIDGE_URL, json=payload, timeout=timeout)
             return response.text
-        except requests.exceptions.Timeout:
-            return "Unity bridge timed out. Unity might be busy or has crashed."
-        except (requests.exceptions.ConnectionError, TimeoutError):
+        except (requests.exceptions.Timeout, TimeoutError) as e:
+            raise BridgeTimeout("post timed out") from e
+        except requests.exceptions.ConnectionError:
             time.sleep(1)
     return "Unity bridge unreachable after retrying."
 
@@ -102,6 +104,7 @@ def wait_for_compile(max_wait_time: int = 30) -> str:
 
 def quit_unity() -> str:
     """Ask Unity to exit"""
+    # TODO: I think this and start/restart unity being in separate files is pretty weird and should be fixed
     try:
         _session.post(BRIDGE_URL, json={"Name": "quit", "Args": {}}, timeout=5)
     except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
