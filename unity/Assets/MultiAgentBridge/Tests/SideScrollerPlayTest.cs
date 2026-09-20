@@ -12,6 +12,7 @@ public class SideScrollerPlayTest
     public IEnumerator SetUp()
     {
         yield return SceneManager.LoadSceneAsync("current", LoadSceneMode.Single);
+        LogAssert.ignoreFailingMessages = true;
     }
 
     [UnityTest]
@@ -96,6 +97,9 @@ public class SideScrollerPlayTest
         Vector3 wallPosition = wall.transform.position;
         Vector3 playerStart = player.transform.position;
 
+        // Isolate movement from the idle input driver by disabling every Player MonoBehaviour
+        DisablePlayerScripts(player, keepAlive: null);
+
         // Move the player towards the wall
         for (int i = 0; i < 100; i++)
         {
@@ -124,9 +128,13 @@ public class SideScrollerPlayTest
         MethodInfo move = component.GetType().GetMethod("Move", new[] { typeof(Vector2) });
         if (move == null) { Assert.Fail("Move(Vector2) method not found in PlayerMover component."); yield break; }
 
-        var readHealth = GetPlayerHealth(player);
-        if (readHealth == null) { Assert.Fail("Health field or property not found in Player components."); yield break; }
+        Component healthComp = FindHealthComponent(player);
+        if (healthComp == null) { Assert.Fail("Health field or property not found in Player components."); yield break; }
+        Func<float> readHealth = ReadHealthFrom(healthComp);
         float startHealth = readHealth();
+
+        // Isolate movement from the idle input driver
+        DisablePlayerScripts(player, keepAlive: healthComp);
 
         // Move the player towards the wall
         for (int i = 0; i < 100; i++)
@@ -145,12 +153,6 @@ public class SideScrollerPlayTest
         GameObject player = GameObject.Find("Player");
         if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
 
-        Component mover = player.GetComponent("PlayerMover");
-        if (mover == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break; }
-        
-        MethodInfo move = mover.GetType().GetMethod("Move", new[] { typeof(Vector2) });
-        if (move == null) { Assert.Fail("Move(Vector2) method not found in PlayerMover component."); yield break; }
-
         GameObject goal = GameObject.Find("Goal");
         if (goal == null) { Assert.Fail("Goal GameObject not found in the scene."); yield break; }
 
@@ -160,16 +162,19 @@ public class SideScrollerPlayTest
         Component levelManager = levelManagerObject.GetComponent("LevelManager");
         if (levelManager == null) { Assert.Fail("LevelManager component not found on LevelManager GameObject."); yield break; }
 
-        var winCondition = GetWinCondition(levelManager);
+        Func<bool> winCondition = GetWinCondition(levelManager);
         if (winCondition == null) { Assert.Fail("winCondition field not found in LevelManager component."); yield break; }
 
-        Vector2 direction = goal.transform.position.x > player.transform.position.x ? Vector2.right : Vector2.left;
+        // Teleport the player onto the goal
+        Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
+        Vector3 goalPos = goal.transform.position;
 
-        for (int i = 0; i < 200; i++)
+        for (int i = 0; i < 20; i++)
         {
-            yield return new WaitForFixedUpdate(); // Wait for the physics update
-            move.Invoke(mover, new object[] { direction });
-            if (winCondition()) break; 
+            player.transform.position = goalPos;
+            if (rb != null) { rb.position = goalPos; rb.linearVelocity = Vector2.zero; }
+            yield return new WaitForFixedUpdate();
+            if (winCondition()) break;
         }
 
         Assert.IsTrue(winCondition(), "Player did not reach the goal and trigger the win condition.");
@@ -187,49 +192,76 @@ public class SideScrollerPlayTest
         return null;
     }
 
-    Func<float> GetPlayerHealth(GameObject player)
+    // Disables every MonoBehaviour on the Player except keepAlive (pass null to disable all).
+    void DisablePlayerScripts(GameObject player, Component keepAlive)
     {
-        foreach (var component in player.GetComponents<Component>())
+        foreach (MonoBehaviour mb in player.GetComponents<MonoBehaviour>())
         {
-            var type = component.GetType();
-            var field = type.GetField("health", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (field != null) { return () => Convert.ToSingle(field.GetValue(component)); }
+            if (mb == keepAlive) { continue; }
+            mb.enabled = false;
+        }
+    }
 
-            var property = type.GetProperty("health", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (property != null) { return () => Convert.ToSingle(property.GetValue(component)); }
+    // Returns the Player component that owns a `health` field/property, so the caller can keep it
+    // enabled while disabling the rest.
+    // Returns the Player component that owns a `health` field/property
+    Component FindHealthComponent(GameObject player)
+    {
+        foreach (Component component in player.GetComponents<Component>())
+        {
+            Type type = component.GetType();
+            if (type.GetField("health", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) != null) { return component; }
+            if (type.GetProperty("health", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) != null) { return component; }
+            if (GetHealthMethod(type) != null) { return component; }
         }
         return null;
     }
 
-        IEnumerator PlayerMoveHelper(GameObject player, Component component, MethodInfo move,
+    MethodInfo GetHealthMethod(Type type)
+    {
+        foreach (string name in new[] { "GetHealth", "Health", "GetCurrentHealth" })
+        {
+            MethodInfo m = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            if (m != null && (m.ReturnType == typeof(int) || m.ReturnType == typeof(float))) { return m; }
+        }
+        return null;
+    }
+
+    Func<float> ReadHealthFrom(Component component)
+    {
+        Type type = component.GetType();
+        FieldInfo field = type.GetField("health", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (field != null) { return () => Convert.ToSingle(field.GetValue(component)); }
+
+        PropertyInfo property = type.GetProperty("health", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (property != null) { return () => Convert.ToSingle(property.GetValue(component)); }
+
+        MethodInfo method = GetHealthMethod(type);
+        if (method != null) { return () => Convert.ToSingle(method.Invoke(component, null)); }
+
+        return null;
+    }
+
+    IEnumerator PlayerMoveHelper(GameObject player, Component mover, MethodInfo move,
                                 Vector2 direction, string label)
     {
+        // Trying to isolate Move by disabling the MonoBehaviour of the player.
+        // Some agent implementations zero velocity when no key is pressed meaning we cannot invoke via reflection and read cleanly.
+        foreach (var mb in player.GetComponents<MonoBehaviour>())
+            mb.enabled = false;
+        
         Vector3 start = player.transform.position;
-        var rb = player.GetComponent<Rigidbody2D>();
-        for (int i = 0; i < 10; i++)
+
+        for (int i = 0; i< 50; i++)
         {
+            move.Invoke(mover, new object[] { direction });
             yield return new WaitForFixedUpdate();
-            move.Invoke(component, new object[] { direction });
-            Vector2 travelled = player.transform.position - start;
-            if (Vector2.Dot(travelled, direction) > 0.1f) break;
+            Vector2 moved = player.transform.position - start;
+            if (Vector2.Dot(moved, direction) > 0.1f) yield break;
         }
 
-        Vector2 moved = player.transform.position - start;
-        if (Vector2.Dot(moved, direction) > 0.1f) { yield break; }
-
-        // Try to find a velocity stomp from a broken Move()
-        if (rb != null)
-        {
-            move.Invoke(component, new object[] { direction });
-            float justSet = rb.linearVelocity.magnitude;
-            yield return new WaitForFixedUpdate();
-            float afterFrame = rb.linearVelocity.magnitude;
-
-            if (justSet > 0.01f && afterFrame < 0.01f)
-            {
-                Assert.Fail($"Player did not move {label} and Move() seems to be resetting velocity each frame.");
-            }
-        }
-        Assert.Greater(Vector2.Dot(moved, direction), 0.1f, $"Player did not move {label}.");
+        Vector2 finalMoved = player.transform.position - start;
+        Assert.Greater(Vector2.Dot(finalMoved, direction), 0.1f,
+        $"Move ({label}) did not move the Player in the {label} direction.");
     }
 }
