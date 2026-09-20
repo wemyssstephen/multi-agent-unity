@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from multi_agent_unity.agent import agent_loop_handler
+from multi_agent_unity.exceptions import BridgeTimeout
 from multi_agent_unity.logging_setup import setup_logging
 from multi_agent_unity.scene_manager import prepare_scene
 from multi_agent_unity.tasks import get_task, get_tests
@@ -35,16 +36,33 @@ class Bench:
         ("topdown",      "populated", "topdown_populated"),
     ]
 
+    def _start_unity(self):
+        proc = launch_unity_headless()
+        wait_for_bridge()
+        return proc
+
+    def _restart_unity(self, proc):
+        proc.terminate()
+        proc.wait(timeout=30)
+        return self._start_unity()
+
     def run(self):
         self.results_path.parent.mkdir(parents=True, exist_ok=True)
-        proc = launch_unity_headless()
+        proc = self._start_unity()
         try:
-            wait_for_bridge()
             with self.results_path.open("a", encoding="utf-8") as out:
                 for genre, condition, scene in self.runs:
                     for system in self.systems:
                         for rep in range(self.reps):
-                            record = self.score(genre, condition, scene, system)
+                            try:
+                                record = self.score(genre, condition, scene, system)
+                            except BridgeTimeout:
+                                log.exception(
+                                    "Bridge timed out: scene=%s, system=%s, rep=%s",
+                                    scene, system, rep)
+                                record = {"scene": scene, "system": system, "passed": False,
+                                      "compiled": False, "error": True, "reason": "timeout"}
+                                proc = self._restart_unity(proc)
                             record["rep"] = rep
                             out.write(json.dumps(record) + "\n")
                             out.flush()
@@ -75,11 +93,10 @@ class Bench:
         return {"scene": scene, "system": system, "passed": passed,
                 "compiled": True, "results": results, **agent_result}
 
-
 if __name__ == "__main__":
     b = Bench()
     logfile = f"results/batch_{datetime.now():%Y%m%d_%H%M%S}.log"
-    setup_logging(logfile)
+    setup_logging(logfile=logfile)
     b.runs = [("topdown", "empty", "topdown_empty")]
     b.systems = ["s"]
     b.reps = 1
