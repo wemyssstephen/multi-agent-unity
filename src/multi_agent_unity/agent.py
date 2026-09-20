@@ -62,7 +62,7 @@ async def run_agent(task: str, agent: Agent, mcp, sender, max_iterations) -> dic
     iteration_cap = False
 
     for i in range(max_iterations):
-        iterations = i + 1
+        iterations += 1
 
         headers, body = agent_client.build_request_payload(messages, tools=agent.tools, model=agent.model, system=agent.system_prompt)
         response = sender(headers, body)
