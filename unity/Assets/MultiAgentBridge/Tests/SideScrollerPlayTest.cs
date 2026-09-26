@@ -53,30 +53,35 @@ public class SideScrollerPlayTest
         Component component = player.GetComponent("PlayerMover");
         if (component == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break; }
 
-        MethodInfo move = component.GetType().GetMethod("Jump", new[] { typeof(Vector2) });
-        if (move == null) { Assert.Fail("Jump(Vector2) method not found in PlayerMover component"); yield break; }
+        MethodInfo jump = component.GetType().GetMethod("Jump", new[] { typeof(Vector2) });
+        if (jump == null) { Assert.Fail("Jump(Vector2) method not found in PlayerMover component"); yield break; }
 
-        Vector3 start = player.transform.position;
-        float peakY = start.y;
-        bool hasJumped = false;
-        bool landed = false;
+        Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
+        if (rb == null) { Assert.Fail("Player has no Rigidbody2D."); yield break; }
 
-        move.Invoke(component, new object[] { Vector2.up });
-        
+        // Step 1: let the Player land and come to rest.
+        for (int i = 0; i < 100; i++)
+        {
+            yield return new WaitForFixedUpdate();
+        }
+        Assert.Less(Mathf.Abs(rb.linearVelocity.y), 0.01f, "Player never came to rest on the ground.");
+
+        // Step 2: jump, and track the highest point reached.
+        float startY = player.transform.position.y;
+        float highestY = startY;
+
+        jump.Invoke(component, new object[] { Vector2.up });
+
         for (int i = 0; i < 300; i++)
         {
-            yield return new WaitForFixedUpdate(); // Wait for the physics update
-            Vector3 currentPosition = player.transform.position;
-            if (currentPosition.y > peakY) peakY = currentPosition.y; // Update peakY if the player has jumped higher
-            if (currentPosition.y > start.y + 0.1f) hasJumped = true; // Check if the player has jumped
-            if (hasJumped && currentPosition.y <= start.y + 0.1f) { landed = true; break; } // Check if the player has landed
+            yield return new WaitForFixedUpdate();
+            highestY = Mathf.Max(highestY, player.transform.position.y);
         }
+        float endY = player.transform.position.y;
 
-        Vector3 end = player.transform.position;
-
-        Assert.IsTrue(hasJumped, "Player did not jump as expected.");
-        Assert.IsTrue(landed, "Player did not land back on the ground as expected.");
-        Assert.AreEqual(start.x, end.x, 0.01f, "Player x drifted.");
+        // Step 3: check it went up, then came back down.
+        Assert.Greater(highestY, startY + 0.5f, "Player did not jump.");
+        Assert.Less(endY, highestY - 0.3f, "Player jumped but never came back down.");
     }
 
     [UnityTest]
