@@ -404,14 +404,17 @@ namespace MultiAgentBridge
                 case SerializedPropertyType.Float:
                     objectProperty.floatValue = objectParams.Value.Value<float>();
                     break;
+                
+                case SerializedPropertyType.Vector2:
+                    objectProperty.vector2Value = ParseVector2(objectParams.Value);
+                    break;
 
                 case SerializedPropertyType.Vector3:
                     objectProperty.vector3Value = ParseVector3(objectParams.Value);
                     break;
                 
                 case SerializedPropertyType.Color:
-                    var c = objectParams.Value.ToObject<float[]>();
-                    objectProperty.colorValue = new Color(c[0], c[1], c[2], c[3]);
+                    objectProperty.colorValue = ParseColor(objectParams.Value);
                     break;
                 
                 case SerializedPropertyType.Boolean:
@@ -494,12 +497,38 @@ namespace MultiAgentBridge
                 var v = value.ToObject<float[]>();
                 return new Vector3(v[0], v[1], v[2]);
             }
-            return new Vector3(
-                value["x"].Value<float>(),
-                value["y"].Value<float>(),
-                value["z"].Value<float>());
+            float z = value["z"] != null ? value["z"].Value<float>() : 0f;
+            return new Vector3(value["x"].Value<float>(), value["y"].Value<float>(), z);
         }
 
+        private static Vector2 ParseVector2(JToken value)
+        {
+            if (value.Type == JTokenType.Array)
+            {
+                var v = value.ToObject<float[]>();
+                return new Vector2(v[0], v[1]);
+            }
+            return new Vector2(
+                value["x"].Value<float>(),
+                value["y"].Value<float>());
+        }
+
+        private static Color ParseColor(JToken value)
+        {
+            if (value.Type == JTokenType.Array)
+            {
+                var c = value.ToObject<float[]>();
+                float alpha = c.Length > 3 ? c[3] : 1f;
+                return new Color(c[0], c[1], c[2], alpha);
+            }
+            float a = value["a"] != null ? value["a"].Value<float>() : 1f;
+            return new Color(
+                value["r"].Value<float>(),
+                value["g"].Value<float>(),
+                value["b"].Value<float>(),
+                a);
+        }
+        
         private static SceneNode BuildNode(GameObject gameObject)
         {
             SceneNode node = new SceneNode();
