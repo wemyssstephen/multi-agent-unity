@@ -40,7 +40,7 @@ class Bridge:
 class AnthropicAPI:
     endpoint = "https://api.anthropic.com/v1/messages"
     version = "2023-06-01"
-    
+
     max_tokens = 8192
     timeout = 300
     retries = 5

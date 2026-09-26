@@ -2,8 +2,8 @@ import logging
 import shutil
 
 from multi_agent_unity.bridge_manager import post
-from multi_agent_unity.unity_manager import refresh_database, request_compile, wait_for_compile
 from multi_agent_unity.config import BenchPaths, UnityAssets
+from multi_agent_unity.unity_manager import refresh_database, request_compile, wait_for_compile
 
 log = logging.getLogger("scene_manager")
 
@@ -30,7 +30,7 @@ def copy_scene_scripts(scene: str) -> None:
     for item in scene_dir.iterdir():
         shutil.copy(item, BenchPaths.working_scripts / item.name)
     log.info("copy_scene_scripts -> copied seed for %s", scene)
-    
+
 def open_scene(scene_path: str) -> str:
     result = post({"Name": "open_scene", "Args": {"ScenePath": scene_path}})
     log.info("open_scene -> %s", result)

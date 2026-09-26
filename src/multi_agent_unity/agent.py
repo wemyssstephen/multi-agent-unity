@@ -1,7 +1,7 @@
 import logging
 import sys
-
 from pathlib import Path
+
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
@@ -29,22 +29,22 @@ class Budget:
             "cache_read_input_tokens": 0,
             "cache_creation_input_tokens": 0,
         }
-    
+
     def take(self) -> bool:
         if self.iterations >= self.limit:
             self.hit_cap = True
             return False
         self.iterations += 1
         return True
-    
+
     def record_usage(self, usage: dict) -> None:
         for key in self.usage:
             self.usage[key] += usage[key]
-            
+
     def record_tool_call(self, name: str) -> None:
         self.tool_call_count += 1
         self.tool_calls_by_name[name] = self.tool_calls_by_name.get(name, 0) + 1
-        
+
     def summary(self) -> dict:
         return {
             "iterations": self.iterations,
@@ -64,11 +64,11 @@ async def agent_loop_handler(task: str, system_flag, model, iteration_budget, se
         tools = await mcp.list_tools()
         anthropic_tools =   [
                         {"name": t.name, "description": t.description, "input_schema": t.input_schema} for t in tools.tools
-                        ]    
+                        ]
         agent = agent_types[system_flag].make(model, anthropic_tools)
         log.info("Running %s agent loop...", agent.name)
         budget = Budget(iteration_budget)
-        result = await run_agent(task, agent, mcp, sender, budget)    
+        result = await run_agent(task, agent, mcp, sender, budget)
         return {"text": result, **budget.summary()}
 
 
@@ -80,7 +80,7 @@ async def run_agent(task: str, agent: Agent, mcp, sender, budget: Budget) -> str
         headers, body = anthropic_api_manager.build_request_payload(messages, tools=agent.tools, model=agent.model, system=agent.system_prompt)
         response = sender(headers, body)
         budget.record_usage(anthropic_api_manager.get_usage(response))
-        
+
         if anthropic_api_manager.get_stop_reason(response) != "tool_use":
             return anthropic_api_manager.get_text(response)
 

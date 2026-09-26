@@ -3,8 +3,8 @@ import time
 
 import requests
 
-from multi_agent_unity.exceptions import BridgeTimeout
 from multi_agent_unity.config import Bridge
+from multi_agent_unity.exceptions import BridgeTimeout
 
 log = logging.getLogger("bridge")
 _session = requests.Session()

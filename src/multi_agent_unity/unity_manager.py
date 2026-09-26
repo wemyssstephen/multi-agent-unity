@@ -1,11 +1,11 @@
-import subprocess
 import logging
+import subprocess
 import time
 
 import requests
 
 from multi_agent_unity.bridge_manager import post, post_quit
-from multi_agent_unity.config import Bridge, BenchPaths
+from multi_agent_unity.config import BenchPaths, Bridge
 
 log = logging.getLogger("unity_manager")
 

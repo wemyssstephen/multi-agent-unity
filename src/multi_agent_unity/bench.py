@@ -10,8 +10,8 @@ from multi_agent_unity.exceptions import BridgeTimeout, TestPollTimeout, UnitySt
 from multi_agent_unity.logging_setup import setup_logging
 from multi_agent_unity.scene_manager import prepare_scene, save_scene
 from multi_agent_unity.tasks import get_task, get_tests
-from multi_agent_unity.test_manager import run_tests, await_tests
-from multi_agent_unity.unity_manager import launch_unity_headless, quit_unity, wait_for_unity, request_compile, wait_for_compile
+from multi_agent_unity.test_manager import await_tests, run_tests
+from multi_agent_unity.unity_manager import launch_unity_headless, quit_unity, request_compile, wait_for_compile, wait_for_unity
 
 log = logging.getLogger("bench")
 
@@ -20,7 +20,7 @@ class Bench:
     systems = ["s", "m"]
     results_path = BenchPaths.results / "runs.jsonl"
     artefacts_path = BenchPaths.results / "artefacts"
-    
+
     iteration_budget = 120
     reps = 5
 
@@ -43,18 +43,18 @@ class Bench:
         proc.terminate()
         proc.wait(timeout=30)
         return self._start_unity()
-    
+
     def _snapshot(self, scene, system, rep):
         dest = self.artefacts_path / scene / system / f"rep{rep}"
         if dest.exists():
             shutil.rmtree(dest)
         dest.mkdir(parents=True)
-        
+
         for name in ("current.unity", "current.unity.meta"):
             source = BenchPaths.working_dir / name
             if source.exists():
                 shutil.copy2(source, dest / name)
-        
+
         if BenchPaths.working_scripts.exists():
             shutil.copytree(BenchPaths.working_scripts, dest / "Scripts", dirs_exist_ok=True)
 
@@ -119,7 +119,7 @@ class Bench:
         if suite["status"] == "error":
             record["test_error"] = suite.get("error")
         return record
-    
+
     def _record(self, scene, system, rep, *, passed=False, compiled=False,
                 reason=None, **extra):
         """Builds one results row."""
