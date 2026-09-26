@@ -23,9 +23,10 @@ dist/
 Thumbs.db
 
 # ─── Project outputs ───────────────────────────────────────
-# /runs/
-# /results/
-# *.log
+/runs/
+/results/
+*.log
+
 
 # Ignore the entire Unity project except the bridge code
 /unity/*
