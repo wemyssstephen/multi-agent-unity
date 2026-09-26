@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEditor;
+using System.Net.Sockets;
 
 namespace MultiAgentBridge
 {
@@ -15,9 +16,9 @@ namespace MultiAgentBridge
     [InitializeOnLoad]
     public static class HttpBridge
     {
-        
         private const int Port = 8080;
-        private const int HandlerTimeOut = 120000;
+        private const int PortRetries = 20;
+        private const int PortRetryDelay = 200;
         private const int PollSleep = 50;
         private static readonly HttpListener listener = new();
 
@@ -35,9 +36,11 @@ namespace MultiAgentBridge
 
         private static void RunListener()
         {
-            listener.Prefixes.Add($"http://localhost:{Port}/");
-            listener.Start();
-            Debug.Log($"Listening for HTTP requests on http://localhost:{Port}/");
+            if (!TryStartListener())
+            {
+                Debug.LogError($"[HttpBridge] Could not bind :{Port} after {PortRetries} attempts — bridge is DOWN for this domain.");
+                return;
+            }
 
             try
             {
@@ -88,6 +91,35 @@ namespace MultiAgentBridge
             {
                 Debug.Log($"HttpListenerException: {ex.Message}");
             }
+            catch (ObjectDisposedException)
+            {
+                Debug.Log("[HttpBridge] Listener closed for domain reload.");
+            }
+        }
+
+        private static bool TryStartListener()
+        {
+            listener.Prefixes.Add($"http://localhost:{Port}/");
+            for (int attempt = 1; attempt <= PortRetries; attempt++)
+            {
+                try
+                {
+                    listener.Start();
+                    Debug.Log($"[HttpBridge] Listening on http://localhost:{Port}/ (bound on attempt {attempt}).");
+                    return true;
+                }
+                catch (SocketException ex)
+                {
+                    Debug.Log($"[HttpBridge] :{Port} busy, attempt {attempt}/{PortRetries} ({ex.SocketErrorCode}); previous domain's socket still releasing, retrying in {PortRetryDelay}ms.");
+                    Thread.Sleep(PortRetryDelay);
+                }
+                catch (HttpListenerException ex)
+                {
+                    Debug.Log($"[HttpBridge] Start failed, attempt {attempt}/{PortRetries} ({ex.Message}); retrying in {PortRetryDelay}ms.");
+                    Thread.Sleep(PortRetryDelay);
+                }
+            }
+            return false;
         }
 
         private static string MintId()
