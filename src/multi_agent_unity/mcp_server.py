@@ -1,15 +1,11 @@
-from pathlib import Path
 from typing import Any
 
 from mcp.server import MCPServer
 
-from multi_agent_unity.unity_bridge_client import post, post_with_compile_retry
+from multi_agent_unity.bridge_manager import post, post_with_compile_retry
+from multi_agent_unity.config import BenchPaths
 
 mcp = MCPServer("Multi-Agent Unity Server", "1.0.0")
-BRIDGE_URL = "http://localhost:8080"
-
-ROOT = Path(r"C:/dev/multi-agent-unity/unity")
-SCRIPTS = ROOT / "Assets/MultiAgentBridge/Working/Scripts"
 
 @mcp.tool()
 def create_gameobject(object_name: str) -> str:
@@ -51,10 +47,11 @@ def create_file(file_name: str, file_content: str) -> str:
 @mcp.tool()
 def list_scripts() -> str:
     """Lists the contents of the Working scripts folder"""
-    if not SCRIPTS.exists():
+    scripts = BenchPaths.working_scripts
+    if not scripts.exists():
         return "No scripts folder"
-    paths = [str(p.relative_to(ROOT)).replace("\\", "/")
-             for p in SCRIPTS.iterdir() if p.is_file()]
+    paths = [str(p.relative_to(BenchPaths.unity_project)).replace("\\", "/")
+             for p in scripts.iterdir() if p.is_file()]
     return "\n".join(paths) if paths else "No scripts found."
 
 @mcp.tool()

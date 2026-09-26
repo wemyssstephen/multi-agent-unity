@@ -1,4 +1,4 @@
-from multi_agent_unity.agent_client import build_request_payload, get_text, get_usage
+from multi_agent_unity.anthropic_api_manager import build_request_payload, get_text, get_usage
 
 RESPONSE =  {
                 "content": [{"type": "text", "text": "Hello!"}, {"type": "text", "text": "How are you?"}],

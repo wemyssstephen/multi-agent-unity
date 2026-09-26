@@ -1,33 +1,28 @@
 import asyncio
 import json
 import logging
-import time
+import shutil
 from datetime import datetime
-from pathlib import Path
 
 from multi_agent_unity.agent import agent_loop_handler
-from multi_agent_unity.exceptions import BridgeTimeout
+from multi_agent_unity.config import BenchPaths, Bridge
+from multi_agent_unity.exceptions import BridgeTimeout, TestPollTimeout, UnityStartupError
 from multi_agent_unity.logging_setup import setup_logging
-from multi_agent_unity.scene_manager import prepare_scene
+from multi_agent_unity.scene_manager import prepare_scene, save_scene
 from multi_agent_unity.tasks import get_task, get_tests
-from multi_agent_unity.unity_bridge_client import (
-    poll_test_result,
-    quit_unity,
-    request_compile,
-    run_tests,
-    save_scene,
-    wait_for_compile,
-)
-from multi_agent_unity.unity_launcher import launch_unity_headless, wait_for_bridge
+from multi_agent_unity.test_manager import run_tests, await_tests
+from multi_agent_unity.unity_manager import launch_unity_headless, quit_unity, wait_for_unity, request_compile, wait_for_compile
 
 log = logging.getLogger("bench")
 
 class Bench:
     model = "claude-haiku-4-5-20251001"
-    max_iterations = 30
-    reps = 5
     systems = ["s", "m"]
-    results_path = Path("results/runs.jsonl")
+    results_path = BenchPaths.results / "runs.jsonl"
+    artefacts_path = BenchPaths.results / "artefacts"
+    
+    iteration_budget = 120
+    reps = 5
 
     runs = [
         ("sidescroller", "empty",     "sidescroller_empty"),
@@ -38,13 +33,30 @@ class Bench:
 
     def _start_unity(self):
         proc = launch_unity_headless()
-        wait_for_bridge()
+        if not wait_for_unity():
+            proc.terminate()
+            raise UnityStartupError(
+                f"Unity did not answer within {Bridge.startup_wait}s of launching")
         return proc
 
     def _restart_unity(self, proc):
         proc.terminate()
         proc.wait(timeout=30)
         return self._start_unity()
+    
+    def _snapshot(self, scene, system, rep):
+        dest = self.artefacts_path / scene / system / f"rep{rep}"
+        if dest.exists():
+            shutil.rmtree(dest)
+        dest.mkdir(parents=True)
+        
+        for name in ("current.unity", "current.unity.meta"):
+            source = BenchPaths.working_dir / name
+            if source.exists():
+                shutil.copy2(source, dest / name)
+        
+        if BenchPaths.working_scripts.exists():
+            shutil.copytree(BenchPaths.working_scripts, dest / "Scripts", dirs_exist_ok=True)
 
     def run(self):
         self.results_path.parent.mkdir(parents=True, exist_ok=True)
@@ -55,49 +67,76 @@ class Bench:
                     for system in self.systems:
                         for rep in range(self.reps):
                             try:
-                                record = self.score(genre, condition, scene, system)
+                                record = self.score(genre, condition, scene, system, rep)
                             except BridgeTimeout:
                                 log.exception(
                                     "Bridge timed out: scene=%s, system=%s, rep=%s",
                                     scene, system, rep)
-                                record = {"scene": scene, "system": system, "passed": False,
-                                      "compiled": False, "error": True, "reason": "timeout"}
+                                record = self._record(scene, system, rep, reason="timeout")
                                 proc = self._restart_unity(proc)
-                            record["rep"] = rep
+                            except TestPollTimeout:
+                                log.exception(
+                                    "Test poll timed out: scene=%s, system=%s, rep=%s",
+                                    scene, system, rep)
+                                record = self._record(scene, system, rep, compiled=True,
+                                                      reason="test_timeout")
+                                proc = self._restart_unity(proc)
+                            except Exception as e:
+                                log.exception(
+                                    "Error - moving to next rep: scene=%s, system=%s, rep=%s",
+                                    scene, system, rep)
+                                while isinstance(e, BaseExceptionGroup):
+                                    e = e.exceptions[0]
+                                record = self._record(scene, system, rep, reason=type(e).__name__)
                             out.write(json.dumps(record) + "\n")
                             out.flush()
         finally:
             quit_unity()
-            proc.terminate() # TODO: actually implement Unity quitting
+            proc.terminate()
 
-    def score(self, genre, condition, scene, system):
+    def score(self, genre, condition, scene, system, rep):
         prepare_scene(scene)
         task = get_task(genre, condition)
         agent_result = asyncio.run(agent_loop_handler(
-            task, system, model=self.model, max_iterations=self.max_iterations))
+            task, system, model=self.model, iteration_budget=self.iteration_budget))
         save_scene()
+        self._snapshot(scene, system, rep)
 
         request_compile()
         if wait_for_compile() != "ready":
-            return {"scene": scene, "system": system, "passed": False, "compiled": False}
+            return self._record(scene, system, rep, **agent_result)
 
-        results = {}
-        for test in get_tests(genre):
-            run_tests(test)
-            while (state := poll_test_result()) == "running":
-                time.sleep(1)
-            results[test] = state
+        started = run_tests(get_tests(genre))
+        if started.startswith("Busy"):
+            raise TestPollTimeout("previous test run still active")
+        suite = await_tests()
+        results = suite["results"]
 
-        passed = all(s == "Passed" for s in results.values())
+        passed = (suite["status"] == "finished" and all(s== "Passed" for s in results.values()))
         log.info("scene=%s system=%s passed=%s", scene, system, passed)
-        return {"scene": scene, "system": system, "passed": passed,
-                "compiled": True, "results": results, **agent_result}
+        record = self._record(scene, system, rep, passed=passed, compiled=True,
+                              results=results, messages=suite.get("messages", {}), **agent_result)
+        if suite["status"] == "error":
+            record["test_error"] = suite.get("error")
+        return record
+    
+    def _record(self, scene, system, rep, *, passed=False, compiled=False,
+                reason=None, **extra):
+        """Builds one results row."""
+        record = {"scene": scene, "system": system, "rep": rep, "model": self.model,
+                  "passed": passed, "compiled": compiled}
+        if reason is not None:
+            record["error"] = True
+            record["reason"] = reason
+        record.update(extra)
+        return record
 
 if __name__ == "__main__":
     b = Bench()
-    logfile = f"results/batch_{datetime.now():%Y%m%d_%H%M%S}.log"
-    setup_logging(logfile=logfile)
-    b.runs = [("topdown", "empty", "topdown_empty")]
-    b.systems = ["s"]
+    timestamp = f"{datetime.now():%Y%m%d_%H%M%S}"
+    b.results_path = BenchPaths.results / f"runs_{timestamp}.jsonl"
+    b.artefacts_path = BenchPaths.results / f"artefacts_{timestamp}"
+    setup_logging(logfile=BenchPaths.results / f"batch_{timestamp}.log")
     b.reps = 1
+    b.model = "claude-opus-5-5"
     b.run()

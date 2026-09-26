@@ -1,8 +1,10 @@
 import requests
+import time
+import logging
 
-from multi_agent_unity.config import get_anthropic_api_key
+from multi_agent_unity.config import AnthropicAPI
 
-END_POINT = "https://api.anthropic.com/v1/messages"
+log = logging.getLogger("anthropic_api_manager")
 
 def build_request_payload(messages: list[dict],
                           *,
@@ -11,17 +13,15 @@ def build_request_payload(messages: list[dict],
                           system=None) -> tuple[dict, dict]:
     """Builds the request payload for the Anthropic API."""
 
-    api_key = get_anthropic_api_key() # TODO: Consider fetching the API key as this is a dependency
-
     request_headers =   {
-                        "x-api-key": api_key,
-                        "anthropic-version": "2023-06-01",
+                        "x-api-key": AnthropicAPI.api_key(),
+                        "anthropic-version": AnthropicAPI.version,
                         "Content-Type": "application/json"
                         }
 
     request_body =      {
                         "model": model,
-                        "max_tokens": 8192,
+                        "max_tokens": AnthropicAPI.max_tokens,
                         "messages": messages,
                         "cache_control": {"type": "ephemeral"}
                         }
@@ -35,9 +35,21 @@ def build_request_payload(messages: list[dict],
 
 def send_request(request_headers: dict, request_body: dict) -> dict:
     """Sends a request to the Anthropic API and returns the response in a dictionary."""
-    response = requests.post(END_POINT, headers=request_headers, json=request_body)
-    response.raise_for_status()  # Raise an error for bad responses
-    return response.json()
+    for attempt in range (AnthropicAPI.retries):
+        try:
+            response = requests.post(AnthropicAPI.endpoint, headers=request_headers,
+                                     json=request_body, timeout=AnthropicAPI.timeout)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            time.sleep(2 ** attempt)
+            continue
+        if response.status_code in AnthropicAPI.RETRYABLE:
+            time.sleep(2 ** attempt)
+            continue
+        if not response.ok:
+            log.error("API %s: %s", response.status_code, response.text)
+        response.raise_for_status()
+        return response.json()
+    raise RuntimeError(f"Anthropic API failed after {AnthropicAPI.retries} attempts")
 
 def get_text(response: dict) -> str:
     """Extracts the text from the Anthropic API response."""
@@ -58,8 +70,6 @@ def get_stop_reason(response: dict) -> str:
     """Extracts the stop reason from the Anthropic API response."""
     return response.get("stop_reason") or "end_turn"
 
-# TODO: Build tool call tests ASAP
-
 def get_tool_calls(response: dict) -> list[dict]:
     """Extracts the tool calls from the Anthropic API response."""
     tool_calls = []
@@ -74,24 +84,6 @@ def get_tool_calls(response: dict) -> list[dict]:
             )
     return tool_calls
 
-def get_tool_results(tool_calls: list[dict], tool_registry: dict) -> list[dict]:
-    """Executes tool calls and returns the results."""
-    # TODO: Consider moving this to a separate module for tool execution.
-    return [run_tool_call(call, tool_registry) for call in tool_calls]
-
-def run_tool_call(call: dict, tool_registry: dict) -> dict:
-    """Executes a single tool call and returns the result."""
-    fn = tool_registry.get(call["name"])
-    if fn is None:
-        error_message = f"Tool '{call['name']}' not found in registry."
-        return build_tool_result(call["tool_use_id"], error_message, is_error=True)
-    try:
-        result = fn(**call["input"])
-    except Exception as e:
-        error_message = f"Error: {e}"
-        return build_tool_result(call["tool_use_id"], error_message, is_error=True)
-    return build_tool_result(call["tool_use_id"], str(result))
-
 def build_tool_result(tool_use_id: str, content: str, is_error: bool = False) -> dict:
     """Builds a tool result dictionary."""
     return {
@@ -100,10 +92,3 @@ def build_tool_result(tool_use_id: str, content: str, is_error: bool = False) ->
         "content": content,
         "is_error": is_error
     }
-
-def print_response_to_terminal(response: dict) -> None:
-    """Prints the response from the Anthropic API to the terminal."""
-    text = get_text(response)
-    usage = get_usage(response)
-    print(f"Response Text: {text}")
-    print(f"Token Usage: {usage}")

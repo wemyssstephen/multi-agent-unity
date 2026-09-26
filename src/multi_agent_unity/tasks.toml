@@ -16,6 +16,9 @@ to the correct GameObjects. Use the list_sprites tool for any sprites you need.
 The game will be evaluated both by automated tests calling your methods directly 
 and by a human playing it, so the player must be controllable and your movement 
 methods must work when called externally.
+Work efficiently and complete the task in as few steps as possible. Only write the
+scripts the game needs: do not write test scripts, verification scripts, demo scripts,
+or documentation files.
 """
 
 [sidescroller.populated]
@@ -35,6 +38,9 @@ to the correct GameObjects. Use the list_sprites tool for any sprites you need.
 The game will be evaluated both by automated tests calling your methods directly 
 and by a human playing it, so the player must be controllable and your movement 
 methods must work when called externally.
+Work efficiently and complete the task in as few steps as possible. Only write the
+scripts the game needs: do not write test scripts, verification scripts, demo scripts,
+or documentation files.
 """
 
 [topdown.empty]
@@ -55,6 +61,9 @@ to the correct GameObjects. Use the list_sprites tool for any sprites you need.
 The game will be evaluated both by automated tests calling your methods directly 
 and by a human playing it, so the player must be controllable and your movement 
 methods must work when called externally.
+Work efficiently and complete the task in as few steps as possible. Only write the
+scripts the game needs: do not write test scripts, verification scripts, demo scripts,
+or documentation files.
 """
 
 [topdown.populated]
@@ -74,6 +83,9 @@ to the correct GameObjects. Use the list_sprites tool for any sprites you need.
 The game will be evaluated both by automated tests calling your methods directly 
 and by a human playing it, so the player must be controllable and your movement 
 methods must work when called externally.
+Work efficiently and complete the task in as few steps as possible. Only write the
+scripts the game needs: do not write test scripts, verification scripts, demo scripts,
+or documentation files.
 """
 
 [tests]
