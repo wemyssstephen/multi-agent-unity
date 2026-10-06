@@ -4,7 +4,7 @@ import time
 import requests
 
 from multi_agent_unity.config import Bridge
-from multi_agent_unity.exceptions import BridgeTimeout
+from multi_agent_unity.exceptions import BridgeTimeout, BridgeUnreachable
 
 log = logging.getLogger("bridge")
 _session = requests.Session()
@@ -18,7 +18,7 @@ def post(payload: dict) -> str:
             raise BridgeTimeout("post timed out") from e
         except requests.exceptions.ConnectionError:
             time.sleep(1)
-    return "Unity bridge unreachable after retrying."
+    raise BridgeUnreachable("Unity bridge unreachable after retrying")
 
 def post_with_compile_retry(payload: dict) -> str:
     for _ in range(Bridge.post_retries):
