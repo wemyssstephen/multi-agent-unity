@@ -6,6 +6,7 @@ import requests
 
 from multi_agent_unity.bridge_manager import post, post_quit
 from multi_agent_unity.config import BenchPaths, Bridge
+from multi_agent_unity.exceptions import BridgeUnreachable
 
 log = logging.getLogger("unity_manager")
 
@@ -30,8 +31,11 @@ def wait_for_unity() -> bool:
     """Block until the bridge answers, or give up."""
     deadline = time.monotonic() + Bridge.startup_wait
     while time.monotonic() < deadline:
-        if check_compile() in ("ready", "compiling", "errors"):
-            return True
+        try:
+            if check_compile() in ("ready", "compiling", "errors"):
+                return True
+        except BridgeUnreachable:
+            pass
     return False
 
 def request_compile() -> str:
