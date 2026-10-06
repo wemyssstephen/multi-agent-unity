@@ -10,11 +10,20 @@ A Wall GameObject with collision that the Player cannot pass through. This must
 be placed to the right of the Player in the scene.
 A Goal GameObject the Player reaches to win.
 A LevelManager GameObject with a LevelManager script containing a winCondition
-field that becomes true when the Player reaches the Goal.
+field that becomes true when the Player reaches the Goal after the Enemy has
+been destroyed.
+An Enemy GameObject with an Enemy script containing a health field and a
+TakeDamage(int amount) method that reduces it. When the Enemy's health reaches
+zero, the Enemy is destroyed. The Enemy patrols back and forth between the Wall
+and the Goal. The Player's health decreases when it touches the Enemy. The
+PlayerMover script also contains an Attack() method that damages the Enemy if
+it is within 2 units of the Player.
+A HUD Canvas containing a UI Slider named HealthBar, anchored to the top-left
+corner of the screen, whose value always equals the Player's current health.
 Write all scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
 to the correct GameObjects. Use the list_sprites tool for any sprites you need.
-The game will be evaluated both by automated tests calling your methods directly 
-and by a human playing it, so the player must be controllable and your movement 
+The game will be evaluated both by automated tests calling your methods directly
+and by a human playing it, so the player must be controllable and your movement
 methods must work when called externally.
 Work efficiently and complete the task in as few steps as possible. Only write the
 scripts the game needs: do not write test scripts, verification scripts, demo scripts,
@@ -32,11 +41,20 @@ A Wall GameObject with collision that the Player cannot pass through. This must
 be placed to the right of the Player in the scene.
 A Goal GameObject the Player reaches to win.
 A LevelManager GameObject with a LevelManager script containing a winCondition
-field that becomes true when the Player reaches the Goal.
+field that becomes true when the Player reaches the Goal after the Enemy has
+been destroyed.
+An Enemy GameObject with an Enemy script containing a health field and a
+TakeDamage(int amount) method that reduces it. When the Enemy's health reaches
+zero, the Enemy is destroyed. The Enemy patrols back and forth between the Wall
+and the Goal. The Player's health decreases when it touches the Enemy. The
+PlayerMover script also contains an Attack() method that damages the Enemy if
+it is within 2 units of the Player.
+A HUD Canvas containing a UI Slider named HealthBar, anchored to the top-left
+corner of the screen, whose value always equals the Player's current health.
 Write any scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
 to the correct GameObjects. Use the list_sprites tool for any sprites you need.
-The game will be evaluated both by automated tests calling your methods directly 
-and by a human playing it, so the player must be controllable and your movement 
+The game will be evaluated both by automated tests calling your methods directly
+and by a human playing it, so the player must be controllable and your movement
 methods must work when called externally.
 Work efficiently and complete the task in as few steps as possible. Only write the
 scripts the game needs: do not write test scripts, verification scripts, demo scripts,
@@ -55,11 +73,20 @@ A Wall GameObject with collision that the Player cannot pass through. This must
 be placed to the right of the Player in the scene.
 A Goal GameObject the Player reaches to win.
 A LevelManager GameObject with a LevelManager script containing a winCondition
-field that becomes true when the Player reaches the Goal.
+field that becomes true when the Player reaches the Goal after the Enemy has
+been destroyed.
+An Enemy GameObject with an Enemy script containing a health field and a
+TakeDamage(int amount) method that reduces it. When the Enemy's health reaches
+zero, the Enemy is destroyed. The Enemy patrols back and forth between the Wall
+and the Goal. The Player's health decreases when it touches the Enemy. The
+PlayerMover script also contains an Attack() method that damages the Enemy if
+it is within 2 units of the Player.
+A HUD Canvas containing a UI Slider named HealthBar, anchored to the top-left
+corner of the screen, whose value always equals the Player's current health.
 Write all scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
 to the correct GameObjects. Use the list_sprites tool for any sprites you need.
-The game will be evaluated both by automated tests calling your methods directly 
-and by a human playing it, so the player must be controllable and your movement 
+The game will be evaluated both by automated tests calling your methods directly
+and by a human playing it, so the player must be controllable and your movement
 methods must work when called externally.
 Work efficiently and complete the task in as few steps as possible. Only write the
 scripts the game needs: do not write test scripts, verification scripts, demo scripts,
@@ -77,11 +104,20 @@ A Wall GameObject with collision that the Player cannot pass through. This must
 be placed to the right of the Player in the scene.
 A Goal GameObject the Player reaches to win.
 A LevelManager GameObject with a LevelManager script containing a winCondition
-field that becomes true when the Player reaches the Goal.
+field that becomes true when the Player reaches the Goal after the Enemy has
+been destroyed.
+An Enemy GameObject with an Enemy script containing a health field and a
+TakeDamage(int amount) method that reduces it. When the Enemy's health reaches
+zero, the Enemy is destroyed. The Enemy patrols back and forth between the Wall
+and the Goal. The Player's health decreases when it touches the Enemy. The
+PlayerMover script also contains an Attack() method that damages the Enemy if
+it is within 2 units of the Player.
+A HUD Canvas containing a UI Slider named HealthBar, anchored to the top-left
+corner of the screen, whose value always equals the Player's current health.
 Write any scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
 to the correct GameObjects. Use the list_sprites tool for any sprites you need.
-The game will be evaluated both by automated tests calling your methods directly 
-and by a human playing it, so the player must be controllable and your movement 
+The game will be evaluated both by automated tests calling your methods directly
+and by a human playing it, so the player must be controllable and your movement
 methods must work when called externally.
 Work efficiently and complete the task in as few steps as possible. Only write the
 scripts the game needs: do not write test scripts, verification scripts, demo scripts,
@@ -94,14 +130,22 @@ sidescroller = [
     "SideScrollerPlayTest.PlayerGravityTest",
     "SideScrollerPlayTest.JumpTest",
     "SideScrollerPlayTest.WallCollideTest",
-    "SideScrollerPlayTest.WinConditionTest",
     "SideScrollerPlayTest.HealthComponentTest",
+    "SideScrollerPlayTest.EnemyPatrolTest",
+    "SideScrollerPlayTest.EnemyContactTest",
+    "SideScrollerPlayTest.AttackTest",
+    "SideScrollerPlayTest.GatedWinTest",
+    "SideScrollerPlayTest.HealthBarTest",
 ]
 topdown = [
     "TopDownPlayTest.MoveTest",
     "TopDownPlayTest.PlayerGravityTest",
     "TopDownPlayTest.GroundIsBackgroundTest",
     "TopDownPlayTest.WallCollideTest",
-    "TopDownPlayTest.WinConditionTest",
     "TopDownPlayTest.HealthComponentTest",
+    "TopDownPlayTest.EnemyPatrolTest",
+    "TopDownPlayTest.EnemyContactTest",
+    "TopDownPlayTest.AttackTest",
+    "TopDownPlayTest.GatedWinTest",
+    "TopDownPlayTest.HealthBarTest",
 ]
