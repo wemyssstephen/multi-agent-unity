@@ -1,127 +1,141 @@
 [sidescroller.empty]
 task = """
-Create a simple side-scroller game with the following:
-A Player GameObject that moves and jumps, controlled by a PlayerMover script
-containing a Move(Vector2 input) method that moves the Player in the direction
-of input and a Jump(Vector2 input) method that handles jumping. The Player
-needs a health field that decreases when it collides with the Wall.
-A Ground GameObject with collision for the Player to stand on.
-A Wall GameObject with collision that the Player cannot pass through. This must
-be placed to the right of the Player in the scene.
-A Goal GameObject the Player reaches to win.
-A LevelManager GameObject with a LevelManager script containing a winCondition
-field that becomes true when the Player reaches the Goal after the Enemy has
-been destroyed.
-An Enemy GameObject with an Enemy script containing a health field and a
-TakeDamage(int amount) method that reduces it. When the Enemy's health reaches
-zero, the Enemy is destroyed. The Enemy patrols back and forth between the Wall
-and the Goal. The Player's health decreases when it touches the Enemy. The
-PlayerMover script also contains an Attack() method that damages the Enemy if
-it is within 2 units of the Player.
-A HUD Canvas containing a UI Slider named HealthBar, anchored to the top-left
-corner of the screen, whose value always equals the Player's current health.
-Write all scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
-to the correct GameObjects. Use the list_sprites tool for any sprites you need.
-The game will be evaluated both by automated tests calling your methods directly
-and by a human playing it, so the player must be controllable and your movement
+Create a side-scroller game. In it, the Player talks to an NPC, who asks them to defeat an Enemy. When the
+Player returns to the NPC after defeating the Enemy, the NPC gives them a key,
+which opens a Door. The Player wins by reaching the Goal once the Enemy is defeated
+and the Door is open. The Enemy patrols and hurts the Player on contact, and a
+health bar shows the Player's health. A Wall to the left of the Player blocks its
+way.
+
+The automated tests rely on these names and behaviours:
+- Player GameObject with a PlayerMover script containing Move(Vector2 input),
+  Jump(Vector2 input) and Attack() (which damages the Enemy within 2 units), a
+  health field, and a hasKey field that becomes true when the NPC gives the key.
+- NPC GameObject with an NPC script containing Interact(), Advance() and a
+  dialogueFinished field. Interact() works within 2 units of the Player and opens
+  a UI panel named DialogueBox showing a dialogue of at least two lines.
+- Enemy GameObject with an Enemy script containing a health field and a
+  TakeDamage(int amount) method. The Enemy is removed when its health reaches zero.
+- Door GameObject that opens when the Player touches it while hasKey is true.
+- Goal GameObject, and a LevelManager GameObject with a LevelManager script
+  containing a winCondition field.
+- Wall GameObject, and a Ground GameObject the Player stands on under gravity.
+- A UI Slider named HealthBar, anchored to the top-left of the screen, whose
+  value always equals the Player's health.
+
+Write all scripts to Assets/MultiAgentBridge/Working/Scripts/. Use the list_sprites tool
+for any sprites you need. The game will be evaluated both by these tests, which call
+your methods directly, and by a human playing it, so it must be playable and your
 methods must work when called externally.
-Work efficiently and complete the task in as few steps as possible. Only write the
-scripts the game needs: do not write test scripts, verification scripts, demo scripts,
-or documentation files.
+Build only what is described: do not add camera scripts, menus, restart controls,
+on-screen messages or other extra features. Work efficiently and complete the task
+in as few steps as possible. Do not write test scripts, verification scripts, demo
+scripts, or documentation files.
 """
 
 [sidescroller.populated]
 task = """
-Build on the existing side-scroller game in the scene so that it contains the
-following. The Player moves and jumps, controlled by a PlayerMover script
-containing a Move(Vector2 input) method that moves the Player in the direction
-of input and a Jump(Vector2 input) method that handles jumping. The Player
-needs a health field that decreases when it collides with the Wall. Also add:
-A Wall GameObject with collision that the Player cannot pass through. This must
-be placed to the right of the Player in the scene.
-A Goal GameObject the Player reaches to win.
-A LevelManager GameObject with a LevelManager script containing a winCondition
-field that becomes true when the Player reaches the Goal after the Enemy has
-been destroyed.
-An Enemy GameObject with an Enemy script containing a health field and a
-TakeDamage(int amount) method that reduces it. When the Enemy's health reaches
-zero, the Enemy is destroyed. The Enemy patrols back and forth between the Wall
-and the Goal. The Player's health decreases when it touches the Enemy. The
-PlayerMover script also contains an Attack() method that damages the Enemy if
-it is within 2 units of the Player.
-A HUD Canvas containing a UI Slider named HealthBar, anchored to the top-left
-corner of the screen, whose value always equals the Player's current health.
-Write any scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
-to the correct GameObjects. Use the list_sprites tool for any sprites you need.
-The game will be evaluated both by automated tests calling your methods directly
-and by a human playing it, so the player must be controllable and your movement
+Extend the existing game in the scene into a side-scroller game. In it, the Player talks to an NPC, who asks them to defeat an Enemy. When the
+Player returns to the NPC after defeating the Enemy, the NPC gives them a key,
+which opens a Door. The Player wins by reaching the Goal once the Enemy is defeated
+and the Door is open. The Enemy patrols and hurts the Player on contact, and a
+health bar shows the Player's health. A Wall to the left of the Player blocks its
+way.
+
+The automated tests rely on these names and behaviours:
+- Player GameObject with a PlayerMover script containing Move(Vector2 input),
+  Jump(Vector2 input) and Attack() (which damages the Enemy within 2 units), a
+  health field, and a hasKey field that becomes true when the NPC gives the key.
+- NPC GameObject with an NPC script containing Interact(), Advance() and a
+  dialogueFinished field. Interact() works within 2 units of the Player and opens
+  a UI panel named DialogueBox showing a dialogue of at least two lines.
+- Enemy GameObject with an Enemy script containing a health field and a
+  TakeDamage(int amount) method. The Enemy is removed when its health reaches zero.
+- Door GameObject that opens when the Player touches it while hasKey is true.
+- Goal GameObject, and a LevelManager GameObject with a LevelManager script
+  containing a winCondition field.
+- Wall GameObject, and a Ground GameObject the Player stands on under gravity.
+- A UI Slider named HealthBar, anchored to the top-left of the screen, whose
+  value always equals the Player's health.
+
+Write any new scripts to Assets/MultiAgentBridge/Working/Scripts/. Use the list_sprites tool
+for any sprites you need. The game will be evaluated both by these tests, which call
+your methods directly, and by a human playing it, so it must be playable and your
 methods must work when called externally.
-Work efficiently and complete the task in as few steps as possible. Only write the
-scripts the game needs: do not write test scripts, verification scripts, demo scripts,
-or documentation files.
+Build only what is described: do not add camera scripts, menus, restart controls,
+on-screen messages or other extra features. Work efficiently and complete the task
+in as few steps as possible. Do not write test scripts, verification scripts, demo
+scripts, or documentation files.
 """
 
 [topdown.empty]
 task = """
-Create a simple top-down game with the following:
-A Player GameObject that moves across the plane in the direction of input,
-controlled by a PlayerMover script containing a Move(Vector2 input) method that
-moves the Player in the direction of input. The Player needs a health field
-that decreases when it collides with the Wall.
-A Ground GameObject for the scene background.
-A Wall GameObject with collision that the Player cannot pass through. This must
-be placed to the right of the Player in the scene.
-A Goal GameObject the Player reaches to win.
-A LevelManager GameObject with a LevelManager script containing a winCondition
-field that becomes true when the Player reaches the Goal after the Enemy has
-been destroyed.
-An Enemy GameObject with an Enemy script containing a health field and a
-TakeDamage(int amount) method that reduces it. When the Enemy's health reaches
-zero, the Enemy is destroyed. The Enemy patrols back and forth between the Wall
-and the Goal. The Player's health decreases when it touches the Enemy. The
-PlayerMover script also contains an Attack() method that damages the Enemy if
-it is within 2 units of the Player.
-A HUD Canvas containing a UI Slider named HealthBar, anchored to the top-left
-corner of the screen, whose value always equals the Player's current health.
-Write all scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
-to the correct GameObjects. Use the list_sprites tool for any sprites you need.
-The game will be evaluated both by automated tests calling your methods directly
-and by a human playing it, so the player must be controllable and your movement
+Create a top-down game. In it, the Player talks to an NPC, who asks them to defeat an Enemy. When the
+Player returns to the NPC after defeating the Enemy, the NPC gives them a key,
+which opens a Door. The Player wins by reaching the Goal once the Enemy is defeated
+and the Door is open. The Enemy patrols and hurts the Player on contact, and a
+health bar shows the Player's health. A Wall to the left of the Player blocks its
+way.
+
+The automated tests rely on these names and behaviours:
+- Player GameObject with a PlayerMover script containing Move(Vector2 input) and
+  Attack() (which damages the Enemy within 2 units), a health field, and a hasKey
+  field that becomes true when the NPC gives the key.
+- NPC GameObject with an NPC script containing Interact(), Advance() and a
+  dialogueFinished field. Interact() works within 2 units of the Player and opens
+  a UI panel named DialogueBox showing a dialogue of at least two lines.
+- Enemy GameObject with an Enemy script containing a health field and a
+  TakeDamage(int amount) method. The Enemy is removed when its health reaches zero.
+- Door GameObject that opens when the Player touches it while hasKey is true.
+- Goal GameObject, and a LevelManager GameObject with a LevelManager script
+  containing a winCondition field.
+- Wall GameObject, and a Ground GameObject used only as the background.
+- A UI Slider named HealthBar, anchored to the top-left of the screen, whose
+  value always equals the Player's health.
+
+Write all scripts to Assets/MultiAgentBridge/Working/Scripts/. Use the list_sprites tool
+for any sprites you need. The game will be evaluated both by these tests, which call
+your methods directly, and by a human playing it, so it must be playable and your
 methods must work when called externally.
-Work efficiently and complete the task in as few steps as possible. Only write the
-scripts the game needs: do not write test scripts, verification scripts, demo scripts,
-or documentation files.
+Build only what is described: do not add camera scripts, menus, restart controls,
+on-screen messages or other extra features. Work efficiently and complete the task
+in as few steps as possible. Do not write test scripts, verification scripts, demo
+scripts, or documentation files.
 """
 
 [topdown.populated]
 task = """
-Build on the existing top-down game in the scene so that it contains the
-following. The Player moves across the plane in the direction of input,
-controlled by a PlayerMover script containing a Move(Vector2 input) method that
-moves the Player in the direction of input. The Player needs a health field
-that decreases when it collides with the Wall. Also add:
-A Wall GameObject with collision that the Player cannot pass through. This must
-be placed to the right of the Player in the scene.
-A Goal GameObject the Player reaches to win.
-A LevelManager GameObject with a LevelManager script containing a winCondition
-field that becomes true when the Player reaches the Goal after the Enemy has
-been destroyed.
-An Enemy GameObject with an Enemy script containing a health field and a
-TakeDamage(int amount) method that reduces it. When the Enemy's health reaches
-zero, the Enemy is destroyed. The Enemy patrols back and forth between the Wall
-and the Goal. The Player's health decreases when it touches the Enemy. The
-PlayerMover script also contains an Attack() method that damages the Enemy if
-it is within 2 units of the Player.
-A HUD Canvas containing a UI Slider named HealthBar, anchored to the top-left
-corner of the screen, whose value always equals the Player's current health.
-Write any scripts to Assets/MultiAgentBridge/Working/Scripts/ and attach them
-to the correct GameObjects. Use the list_sprites tool for any sprites you need.
-The game will be evaluated both by automated tests calling your methods directly
-and by a human playing it, so the player must be controllable and your movement
+Extend the existing game in the scene into a top-down game. In it, the Player talks to an NPC, who asks them to defeat an Enemy. When the
+Player returns to the NPC after defeating the Enemy, the NPC gives them a key,
+which opens a Door. The Player wins by reaching the Goal once the Enemy is defeated
+and the Door is open. The Enemy patrols and hurts the Player on contact, and a
+health bar shows the Player's health. A Wall to the left of the Player blocks its
+way.
+
+The automated tests rely on these names and behaviours:
+- Player GameObject with a PlayerMover script containing Move(Vector2 input) and
+  Attack() (which damages the Enemy within 2 units), a health field, and a hasKey
+  field that becomes true when the NPC gives the key.
+- NPC GameObject with an NPC script containing Interact(), Advance() and a
+  dialogueFinished field. Interact() works within 2 units of the Player and opens
+  a UI panel named DialogueBox showing a dialogue of at least two lines.
+- Enemy GameObject with an Enemy script containing a health field and a
+  TakeDamage(int amount) method. The Enemy is removed when its health reaches zero.
+- Door GameObject that opens when the Player touches it while hasKey is true.
+- Goal GameObject, and a LevelManager GameObject with a LevelManager script
+  containing a winCondition field.
+- Wall GameObject, and a Ground GameObject used only as the background.
+- A UI Slider named HealthBar, anchored to the top-left of the screen, whose
+  value always equals the Player's health.
+  
+Write any new scripts to Assets/MultiAgentBridge/Working/Scripts/. Use the list_sprites tool
+for any sprites you need. The game will be evaluated both by these tests, which call
+your methods directly, and by a human playing it, so it must be playable and your
 methods must work when called externally.
-Work efficiently and complete the task in as few steps as possible. Only write the
-scripts the game needs: do not write test scripts, verification scripts, demo scripts,
-or documentation files.
+Build only what is described: do not add camera scripts, menus, restart controls,
+on-screen messages or other extra features. Work efficiently and complete the task
+in as few steps as possible. Do not write test scripts, verification scripts, demo
+scripts, or documentation files.
 """
 
 [tests]
@@ -130,22 +144,26 @@ sidescroller = [
     "SideScrollerPlayTest.PlayerGravityTest",
     "SideScrollerPlayTest.JumpTest",
     "SideScrollerPlayTest.WallCollideTest",
-    "SideScrollerPlayTest.HealthComponentTest",
     "SideScrollerPlayTest.EnemyPatrolTest",
     "SideScrollerPlayTest.EnemyContactTest",
     "SideScrollerPlayTest.AttackTest",
-    "SideScrollerPlayTest.GatedWinTest",
     "SideScrollerPlayTest.HealthBarTest",
+    "SideScrollerPlayTest.DialogueTest",
+    "SideScrollerPlayTest.QuestTest",
+    "SideScrollerPlayTest.DoorTest",
+    "SideScrollerPlayTest.GatedWinTest",
 ]
 topdown = [
     "TopDownPlayTest.MoveTest",
     "TopDownPlayTest.PlayerGravityTest",
     "TopDownPlayTest.GroundIsBackgroundTest",
     "TopDownPlayTest.WallCollideTest",
-    "TopDownPlayTest.HealthComponentTest",
     "TopDownPlayTest.EnemyPatrolTest",
     "TopDownPlayTest.EnemyContactTest",
     "TopDownPlayTest.AttackTest",
-    "TopDownPlayTest.GatedWinTest",
     "TopDownPlayTest.HealthBarTest",
+    "TopDownPlayTest.DialogueTest",
+    "TopDownPlayTest.QuestTest",
+    "TopDownPlayTest.DoorTest",
+    "TopDownPlayTest.GatedWinTest",
 ]

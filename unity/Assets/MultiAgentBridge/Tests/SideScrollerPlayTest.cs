@@ -15,32 +15,32 @@ public class SideScrollerPlayTest
     {
         yield return SceneManager.LoadSceneAsync("current", LoadSceneMode.Single);
         LogAssert.ignoreFailingMessages = true;
+
+        // Let Awake and Start run, and the scene settle, before any test acts.
+        for (int i = 0; i < 10; i++)
+        {
+            yield return new WaitForFixedUpdate();
+        }
     }
+
 
     [UnityTest]
     public IEnumerator MoveTest()
     {
-        GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break;}
+        GameObject player = FindOrFail("Player");
+        Component mover = ComponentOrFail(player, "PlayerMover");
+        MethodInfo move = MethodOrFail(mover, "Move", typeof(Vector2));
 
-        Component component = player.GetComponent("PlayerMover");
-        if (component == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break;}
-
-        MethodInfo move = component.GetType().GetMethod("Move", new[] { typeof(Vector2) });
-        if (move == null) { Assert.Fail("Move(Vector2) method not found in PlayerMover component"); yield break; }
-        
-        yield return PlayerMoveHelper(player, component, move, Vector2.right, "right");
-        yield return PlayerMoveHelper(player, component, move, Vector2.left,  "left");
+        yield return PlayerMoveHelper(player, mover, move, Vector2.right, "right");
+        yield return PlayerMoveHelper(player, mover, move, Vector2.left,  "left");
     }
 
     [UnityTest]
     public IEnumerator PlayerGravityTest()
     {
-        GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
-
+        GameObject player = FindOrFail("Player");
         Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
-        if (rb == null) { Assert.Fail("Side-scroller Player has no Rigidbody2D, so it cannot fall under gravity."); yield break; }
+        if (rb == null) { Assert.Fail("Side-scroller Player has no Rigidbody2D, so it cannot fall under gravity."); }
 
         Assert.Greater(rb.gravityScale, 0f, "Side-scroller Player has a Rigidbody2D but gravity is disabled.");
         yield return null;
@@ -49,31 +49,23 @@ public class SideScrollerPlayTest
     [UnityTest]
     public IEnumerator JumpTest()
     {
-        GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
-
-        Component component = player.GetComponent("PlayerMover");
-        if (component == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break; }
-
-        MethodInfo jump = component.GetType().GetMethod("Jump", new[] { typeof(Vector2) });
-        if (jump == null) { Assert.Fail("Jump(Vector2) method not found in PlayerMover component"); yield break; }
-
+        GameObject player = FindOrFail("Player");
+        Component mover = ComponentOrFail(player, "PlayerMover");
+        MethodInfo jump = MethodOrFail(mover, "Jump", typeof(Vector2));
         Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
-        if (rb == null) { Assert.Fail("Player has no Rigidbody2D."); yield break; }
+        if (rb == null) { Assert.Fail("Player has no Rigidbody2D."); }
 
-        // Step 1: let the Player land and come to rest.
+        // let the Player land and come to rest.
         for (int i = 0; i < 100; i++)
         {
             yield return new WaitForFixedUpdate();
         }
         Assert.Less(Mathf.Abs(rb.linearVelocity.y), 0.01f, "Player never came to rest on the ground.");
 
-        // Step 2: jump, and track the highest point reached.
+        // jump and track the highest point reached.
         float startY = player.transform.position.y;
         float highestY = startY;
-
-        jump.Invoke(component, new object[] { Vector2.up });
-
+        jump.Invoke(mover, new object[] { Vector2.up });
         for (int i = 0; i < 300; i++)
         {
             yield return new WaitForFixedUpdate();
@@ -81,7 +73,7 @@ public class SideScrollerPlayTest
         }
         float endY = player.transform.position.y;
 
-        // Step 3: check it went up, then came back down.
+        // check it went up, then came back down.
         Assert.Greater(highestY, startY + 0.5f, "Player did not jump.");
         Assert.Less(endY, highestY - 0.3f, "Player jumped but never came back down.");
     }
@@ -89,121 +81,34 @@ public class SideScrollerPlayTest
     [UnityTest]
     public IEnumerator WallCollideTest()
     {
-        GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
-
-        GameObject wall = GameObject.Find("Wall");
-        if (wall == null) { Assert.Fail("Wall GameObject not found in the scene."); yield break; }
-
-        Component component = player.GetComponent("PlayerMover");
-        if (component == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break; }
-
-        MethodInfo move = component.GetType().GetMethod("Move", new[] { typeof(Vector2) });
-        if (move == null) { Assert.Fail("Move(Vector2) method not found in PlayerMover component."); yield break;}
+        GameObject player = FindOrFail("Player");
+        GameObject wall = FindOrFail("Wall");
+        Component mover = ComponentOrFail(player, "PlayerMover");
+        MethodInfo move = MethodOrFail(mover, "Move", typeof(Vector2));
 
         Vector3 wallPosition = wall.transform.position;
         Vector3 playerStart = player.transform.position;
+        Assert.Less(wallPosition.x, playerStart.x - 1f, "Wall is not positioned to the left of the Player.");
 
-        // Isolate movement from the idle input driver by disabling every Player MonoBehaviour
+        // Disable every Player script, so input code cannot cancel Move.
         DisablePlayerScripts(player, keepAlive: null);
 
-        // Move the player towards the wall
         for (int i = 0; i < 100; i++)
         {
-            yield return new WaitForFixedUpdate(); // Wait for the physics update
-            move.Invoke(component, new object[] { Vector2.right });
+            move.Invoke(mover, new object[] { Vector2.left });
+            yield return new WaitForFixedUpdate();
         }
 
         Vector3 playerEnd = player.transform.position;
-        Assert.Greater(wallPosition.x, playerStart.x + 2f, "Wall is not positioned to the right of the player — test setup issue.");
-        Assert.Greater(playerEnd.x, playerStart.x, "Player did not move toward the wall — Move produced no motion.");
-        Assert.LessOrEqual(playerEnd.x, wallPosition.x - 0.5f, "Player passed through the wall, collision detection failed.");
+        Assert.Less(playerEnd.x, playerStart.x, "Player did not move toward the Wall. Move produced no motion.");
+        Assert.Greater(playerEnd.x, wallPosition.x, "Player passed through the Wall, collision detection failed.");
     }
 
     [UnityTest]
-    public IEnumerator HealthComponentTest()
-    {
-        GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
-
-        GameObject wall = GameObject.Find("Wall");
-        if (wall == null) { Assert.Fail("Wall GameObject not found in the scene."); yield break; }
-
-        Component component = player.GetComponent("PlayerMover");
-        if (component == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break; }
-
-        MethodInfo move = component.GetType().GetMethod("Move", new[] { typeof(Vector2) });
-        if (move == null) { Assert.Fail("Move(Vector2) method not found in PlayerMover component."); yield break; }
-
-        Component healthComp = FindHealthComponent(player);
-        if (healthComp == null) { Assert.Fail("Health field or property not found in Player components."); yield break; }
-        Func<float> readHealth = ReadHealthFrom(healthComp);
-        float startHealth = readHealth();
-
-        // Isolate movement from the idle input driver
-        DisablePlayerScripts(player, keepAlive: healthComp);
-
-        // Move the player towards the wall
-        for (int i = 0; i < 100; i++)
-        {
-            yield return new WaitForFixedUpdate(); // Wait for the physics update
-            move.Invoke(component, new object[] { Vector2.right });
-            if (readHealth() < startHealth) { break; } // Exit early if health has decreased
-        }
-
-        Assert.Less(readHealth(), startHealth, "Player health did not decrease after colliding with the wall.");
-    }
-
-    [UnityTest]
-    public IEnumerator WinConditionTest()
-    {
-        GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
-
-        GameObject goal = GameObject.Find("Goal");
-        if (goal == null) { Assert.Fail("Goal GameObject not found in the scene."); yield break; }
-
-        GameObject levelManagerObject = GameObject.Find("LevelManager");
-        if (levelManagerObject == null) { Assert.Fail("LevelManager GameObject not found in the scene."); yield break; }
-
-        Component levelManager = levelManagerObject.GetComponent("LevelManager");
-        if (levelManager == null) { Assert.Fail("LevelManager component not found on LevelManager GameObject."); yield break; }
-
-        Func<bool> winCondition = GetWinCondition(levelManager);
-        if (winCondition == null) { Assert.Fail("winCondition field not found in LevelManager component."); yield break; }
-
-        // Teleport the player onto the goal
-        Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
-        Vector3 goalPos = goal.transform.position;
-
-        for (int i = 0; i < 20; i++)
-        {
-            player.transform.position = goalPos;
-            if (rb != null) { rb.position = goalPos; rb.linearVelocity = Vector2.zero; }
-            yield return new WaitForFixedUpdate();
-            if (winCondition()) break;
-        }
-
-        Assert.IsTrue(winCondition(), "Player did not reach the goal and trigger the win condition.");
-    }
-
-    // ---------- Enemy tests ----------
-    
-
-     [UnityTest]
     public IEnumerator EnemyPatrolTest()
     {
-        GameObject enemy = GameObject.Find("Enemy");
-        if (enemy == null) { Assert.Fail("Enemy GameObject not found in the scene."); yield break; }
- 
-        // Let the scene settle first (e.g. a side-scroller Enemy landing on the Ground).
-        for (int i = 0; i < 50; i++)
-        {
-            yield return new WaitForFixedUpdate();
-        }
-        if (IsGone(enemy)) { Assert.Fail("Enemy was destroyed before it could patrol."); yield break; }
- 
-        // Watch for 3 seconds and record the furthest it gets from where it started.
+        GameObject enemy = FindOrFail("Enemy");
+
         Vector2 start = enemy.transform.position;
         float furthest = 0f;
         for (int i = 0; i < 150; i++)
@@ -213,58 +118,45 @@ public class SideScrollerPlayTest
             Vector2 now = enemy.transform.position;
             furthest = Mathf.Max(furthest, Vector2.Distance(start, now));
         }
- 
+
         Assert.Greater(furthest, 0.5f, "Enemy did not patrol.");
     }
- 
+
     [UnityTest]
     public IEnumerator EnemyContactTest()
     {
-        GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
- 
-        GameObject enemy = GameObject.Find("Enemy");
-        if (enemy == null) { Assert.Fail("Enemy GameObject not found in the scene."); yield break; }
- 
+        GameObject player = FindOrFail("Player");
+        GameObject enemy = FindOrFail("Enemy");
+
         Component healthComp = FindHealthComponent(player);
-        if (healthComp == null) { Assert.Fail("Health field or property not found in Player components."); yield break; }
+        if (healthComp == null) { Assert.Fail("Health field or property not found in Player components."); }
         Func<float> readHealth = ReadHealthFrom(healthComp);
         float startHealth = readHealth();
- 
-        // Hold the Player on the Enemy until contact registers.
-        for (int i = 0; i < 50; i++)
+
+        for (int i = 0; i < 100; i++)
         {
             if (IsGone(enemy)) { break; }
             Teleport(player, enemy.transform.position);
             yield return new WaitForFixedUpdate();
             if (readHealth() < startHealth) { break; }
         }
- 
+
         Assert.Less(readHealth(), startHealth, "Player health did not decrease after touching the Enemy.");
     }
- 
+
     [UnityTest]
     public IEnumerator AttackTest()
     {
-        GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
- 
-        Component mover = player.GetComponent("PlayerMover");
-        if (mover == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break; }
- 
-        MethodInfo attack = mover.GetType().GetMethod("Attack", Type.EmptyTypes);
-        if (attack == null) { Assert.Fail("Attack() method not found in PlayerMover component."); yield break; }
- 
-        GameObject enemy = GameObject.Find("Enemy");
-        if (enemy == null) { Assert.Fail("Enemy GameObject not found in the scene."); yield break; }
- 
-        Component enemyComp = enemy.GetComponent("Enemy");
-        if (enemyComp == null) { Assert.Fail("Enemy component not found on Enemy GameObject."); yield break; }
- 
+        GameObject player = FindOrFail("Player");
+        Component mover = ComponentOrFail(player, "PlayerMover");
+        MethodInfo attack = MethodOrFail(mover, "Attack");
+        GameObject enemy = FindOrFail("Enemy");
+        Component enemyComp = ComponentOrFail(enemy, "Enemy");
+
         Func<float> readEnemyHealth = ReadHealthFrom(enemyComp);
-        if (readEnemyHealth == null) { Assert.Fail("Health field not found in Enemy component."); yield break; }
+        if (readEnemyHealth == null) { Assert.Fail("Health field not found in Enemy component."); }
         float startHealth = readEnemyHealth();
- 
+
         bool damaged = false;
         for (int attempt = 0; attempt < 6 && !damaged; attempt++)
         {
@@ -275,134 +167,230 @@ public class SideScrollerPlayTest
                 Teleport(player, enemy.transform.position + Vector3.left);
                 yield return new WaitForFixedUpdate();
             }
-            if (IsGone(enemy)) { Assert.Fail("Enemy disappeared before it was attacked."); yield break; }
- 
+            if (IsGone(enemy)) { Assert.Fail("Enemy disappeared before it was attacked."); }
+
             attack.Invoke(mover, null);
             yield return new WaitForFixedUpdate();
             damaged = IsGone(enemy) || readEnemyHealth() < startHealth;
         }
- 
+
         Assert.IsTrue(damaged, "Attack() did not damage the Enemy.");
     }
- 
+
     [UnityTest]
-    public IEnumerator GatedWinTest()
+    public IEnumerator HealthBarTest()
     {
-        GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
- 
-        GameObject goal = GameObject.Find("Goal");
-        if (goal == null) { Assert.Fail("Goal GameObject not found in the scene."); yield break; }
- 
-        GameObject levelManagerObject = GameObject.Find("LevelManager");
-        if (levelManagerObject == null) { Assert.Fail("LevelManager GameObject not found in the scene."); yield break; }
- 
-        Component levelManager = levelManagerObject.GetComponent("LevelManager");
-        if (levelManager == null) { Assert.Fail("LevelManager component not found on LevelManager GameObject."); yield break; }
- 
-        Func<bool> winCondition = GetWinCondition(levelManager);
-        if (winCondition == null) { Assert.Fail("winCondition field not found in LevelManager component."); yield break; }
- 
-        GameObject enemy = GameObject.Find("Enemy");
-        if (enemy == null) { Assert.Fail("Enemy GameObject not found in the scene."); yield break; }
- 
-        Component enemyComp = enemy.GetComponent("Enemy");
-        if (enemyComp == null) { Assert.Fail("Enemy component not found on Enemy GameObject."); yield break; }
- 
-        MethodInfo takeDamage = GetTakeDamage(enemyComp.GetType());
-        if (takeDamage == null) { Assert.Fail("TakeDamage(int) method not found in Enemy component."); yield break; }
- 
+        GameObject bar = FindOrFail("HealthBar");
+        Component slider = ComponentOrFail(bar, "Slider");
+        if (bar.GetComponentInParent<Canvas>() == null) { Assert.Fail("HealthBar is not inside a Canvas."); }
+        if (!AnchoredTopLeft(bar)) { Assert.Fail("HealthBar is not anchored to the top-left of the screen."); }
+
+        PropertyInfo valueProperty = slider.GetType().GetProperty("value");
+        Func<float> readBar = () => Convert.ToSingle(valueProperty.GetValue(slider));
+
+        GameObject player = FindOrFail("Player");
+        GameObject enemy = FindOrFail("Enemy");
+        Component healthComp = FindHealthComponent(player);
+        if (healthComp == null) { Assert.Fail("Health field or property not found in Player components."); }
+        Func<float> readHealth = ReadHealthFrom(healthComp);
+
+        Assert.AreEqual(readHealth(), readBar(), 0.01f, "HealthBar does not show the Player's starting health.");
+
         Vector3 away = player.transform.position;
-        Vector3 goalPos = goal.transform.position;
- 
-        // 1. Reaching the Goal while the Enemy is alive must NOT win.
-        for (int i = 0; i < 20; i++)
+        float startHealth = readHealth();
+        for (int i = 0; i < 100; i++)
         {
-            Teleport(player, goalPos);
+            if (IsGone(enemy)) { break; }
+            Teleport(player, enemy.transform.position);
             yield return new WaitForFixedUpdate();
+            if (readHealth() < startHealth) { break; }
         }
-        Assert.IsFalse(winCondition(), "Win triggered while the Enemy was still alive.");
- 
-        // Step off the Goal, so reaching it again fires its trigger again.
+        if (readHealth() >= startHealth) { Assert.Fail("Could not damage the Player on the Enemy; HealthBar tracking untested."); }
+
+        yield return HoldPlayerAt(player, away, 5);
         for (int i = 0; i < 5; i++)
         {
-            Teleport(player, away);
-            yield return new WaitForFixedUpdate();
+            yield return null;
         }
- 
-        // 2. Defeat the Enemy directly (independent of Attack), and check it is destroyed.
+
+        Assert.AreEqual(readHealth(), readBar(), 0.01f, "HealthBar did not update when the Player took damage.");
+    }
+
+    [UnityTest]
+    public IEnumerator DialogueTest()
+    {
+        GameObject player = FindOrFail("Player");
+        GameObject npc = FindOrFail("NPC");
+        Component npcComp = ComponentOrFail(npc, "NPC");
+        MethodInfo interact = MethodOrFail(npcComp, "Interact");
+        MethodInfo advance = MethodOrFail(npcComp, "Advance");
+
+        Component dialogueOwner = FindComponentWithMember(npc, "dialogueFinished");
+        if (dialogueOwner == null) { Assert.Fail("dialogueFinished field not found on the NPC."); }
+
+        GameObject box = FindIncludingInactive("DialogueBox");
+        if (box == null) { Assert.Fail("DialogueBox not found in the scene."); }
+
+        // 1. Stand beside the NPC and talk to it.
+        Vector3 besideNpc = npc.transform.position + Vector3.left;
+        yield return HoldPlayerAt(player, besideNpc, 10);
+        interact.Invoke(npcComp, null);
+        yield return HoldPlayerAt(player, besideNpc, 5);
+
+        Assert.IsTrue(box.activeInHierarchy, "DialogueBox did not open after Interact().");
+        string firstLine = ReadText(box);
+        Assert.IsNotEmpty(firstLine, "DialogueBox opened but shows no text.");
+
+        // Advance until the dialogue finishes
+        bool lineChanged = false;
+        for (int i = 0; i < 20 && !ReadBool(dialogueOwner, "dialogueFinished"); i++)
+        {
+            advance.Invoke(npcComp, null);
+            yield return HoldPlayerAt(player, besideNpc, 2);
+            if (box.activeInHierarchy && ReadText(box) != firstLine) { lineChanged = true; }
+        }
+
+        Assert.IsTrue(ReadBool(dialogueOwner, "dialogueFinished"), "dialogueFinished did not become true after advancing through the dialogue.");
+        Assert.IsTrue(lineChanged, "Advance() did not move the dialogue to a new line.");
+    }
+
+    [UnityTest]
+    public IEnumerator QuestTest()
+    {
+        GameObject player = FindOrFail("Player");
+        GameObject npc = FindOrFail("NPC");
+        Component npcComp = ComponentOrFail(npc, "NPC");
+        MethodInfo interact = MethodOrFail(npcComp, "Interact");
+        MethodInfo advance = MethodOrFail(npcComp, "Advance");
+        GameObject enemy = FindOrFail("Enemy");
+        Component enemyComp = ComponentOrFail(enemy, "Enemy");
+        MethodInfo takeDamage = GetTakeDamage(enemyComp.GetType());
+        if (takeDamage == null) { Assert.Fail("TakeDamage(int) method not found in Enemy component."); }
+
+        Component dialogueOwner = FindComponentWithMember(npc, "dialogueFinished");
+        if (dialogueOwner == null) { Assert.Fail("dialogueFinished field not found on the NPC."); }
+        Component keyOwner = FindComponentWithMember(player, "hasKey");
+        if (keyOwner == null) { Assert.Fail("hasKey field not found in Player components."); }
+        Assert.IsFalse(ReadBool(keyOwner, "hasKey"), "Player has the key before the quest started.");
+
+        Vector3 besideNpc = npc.transform.position + Vector3.left;
+
+        // Finish the NPC's dialogue.
+        yield return HoldPlayerAt(player, besideNpc, 10);
+        interact.Invoke(npcComp, null);
+        yield return HoldPlayerAt(player, besideNpc, 5);
+        for (int i = 0; i < 20 && !ReadBool(dialogueOwner, "dialogueFinished"); i++)
+        {
+            advance.Invoke(npcComp, null);
+            yield return HoldPlayerAt(player, besideNpc, 2);
+        }
+        if (!ReadBool(dialogueOwner, "dialogueFinished")) { Assert.Fail("Could not finish the NPC dialogue; quest untested."); }
+
+        // Defeat the Enemy
         InvokeTakeDamage(takeDamage, enemyComp, 9999);
         for (int i = 0; i < 10 && !IsGone(enemy); i++)
         {
             yield return new WaitForFixedUpdate();
         }
-        Assert.IsTrue(IsGone(enemy), "Enemy was not destroyed when its health reached zero.");
- 
-        // 3. Now reaching the Goal must win.
-        for (int i = 0; i < 20; i++)
+        if (!IsGone(enemy)) { Assert.Fail("Could not destroy the Enemy; quest untested."); }
+
+        // Return to the NPC. Interact, then advance any reward dialogue, until the key is given.
+        yield return HoldPlayerAt(player, besideNpc, 5);
+        interact.Invoke(npcComp, null);
+        yield return HoldPlayerAt(player, besideNpc, 5);
+        for (int i = 0; i < 20 && !ReadBool(keyOwner, "hasKey"); i++)
+        {
+            advance.Invoke(npcComp, null);
+            yield return HoldPlayerAt(player, besideNpc, 2);
+        }
+
+        Assert.IsTrue(ReadBool(keyOwner, "hasKey"), "Returning to the NPC after the dialogue and the Enemy's defeat did not give the Player the key.");
+    }
+
+    [UnityTest]
+    public IEnumerator DoorTest()
+    {
+        GameObject player = FindOrFail("Player");
+        GameObject door = FindOrFail("Door");
+        Component keyOwner = FindComponentWithMember(player, "hasKey");
+        if (keyOwner == null) { Assert.Fail("hasKey field not found in Player components."); }
+
+        Vector3 doorPos = door.transform.position;
+        Vector3 beforeDoor = doorPos + Vector3.left * 3f;
+
+        // Without the key, the Door is solid and touching it does not open it.
+        Assert.IsFalse(DoorIsOpen(door), "Door has no solid collider, so it cannot block the Player.");
+        yield return HoldPlayerAt(player, doorPos, 25);
+        Assert.IsFalse(DoorIsOpen(door), "Door opened without the key.");
+
+        // With the key, touching the Door opens it. Step away first so contact starts afresh.
+        WriteBool(keyOwner, "hasKey", true);
+        yield return HoldPlayerAt(player, beforeDoor, 5);
+        for (int i = 0; i < 50 && !DoorIsOpen(door); i++)
+        {
+            Teleport(player, doorPos);
+            yield return new WaitForFixedUpdate();
+        }
+
+        Assert.IsTrue(DoorIsOpen(door), "Door did not open when the Player touched it with hasKey true.");
+    }
+
+    [UnityTest]
+    public IEnumerator GatedWinTest()
+    {
+        GameObject player = FindOrFail("Player");
+        GameObject goal = FindOrFail("Goal");
+        GameObject levelManagerObject = FindOrFail("LevelManager");
+        Component levelManager = ComponentOrFail(levelManagerObject, "LevelManager");
+        Func<bool> winCondition = GetWinCondition(levelManager);
+        if (winCondition == null) { Assert.Fail("winCondition field not found in LevelManager component."); }
+
+        GameObject enemy = FindOrFail("Enemy");
+        Component enemyComp = ComponentOrFail(enemy, "Enemy");
+        MethodInfo takeDamage = GetTakeDamage(enemyComp.GetType());
+        if (takeDamage == null) { Assert.Fail("TakeDamage(int) method not found in Enemy component."); }
+
+        GameObject door = FindOrFail("Door");
+        Vector3 doorPos = door.transform.position;
+        Component keyOwner = FindComponentWithMember(player, "hasKey");
+        if (keyOwner == null) { Assert.Fail("hasKey field not found in Player components."); }
+
+        Vector3 away = player.transform.position;
+        Vector3 goalPos = goal.transform.position;
+
+        // Reaching the Goal with the Enemy alive and the Door closed must NOT win.
+        yield return HoldPlayerAt(player, goalPos, 20);
+        Assert.IsFalse(winCondition(), "Win triggered while the Enemy was alive and the Door closed.");
+        yield return HoldPlayerAt(player, away, 5);
+
+        // Defeat the Enemy directly. With the Door still closed, the Goal must still NOT win.
+        InvokeTakeDamage(takeDamage, enemyComp, 9999);
+        for (int i = 0; i < 10 && !IsGone(enemy); i++)
+        {
+            yield return new WaitForFixedUpdate();
+        }
+        if (!IsGone(enemy)) { Assert.Fail("Could not destroy the Enemy; win untested."); }
+
+        yield return HoldPlayerAt(player, goalPos, 20);
+        Assert.IsFalse(winCondition(), "Win triggered before the Door was opened.");
+        yield return HoldPlayerAt(player, away, 5);
+
+        // Open the Door with the key.
+        WriteBool(keyOwner, "hasKey", true);
+        for (int i = 0; i < 50 && !DoorIsOpen(door); i++)
+        {
+            Teleport(player, doorPos);
+            yield return new WaitForFixedUpdate();
+        }
+        if (!DoorIsOpen(door)) { Assert.Fail("Could not open the Door; win untested."); }
+        yield return HoldPlayerAt(player, away, 5);
+
+        // Now reaching the Goal must win.
+        for (int i = 0; i < 40 && !winCondition(); i++)
         {
             Teleport(player, goalPos);
             yield return new WaitForFixedUpdate();
-            if (winCondition()) { break; }
         }
-        Assert.IsTrue(winCondition(), "Player did not win after defeating the Enemy and reaching the Goal.");
-    }
- 
-    // ---------- HUD ----------
- 
-    [UnityTest]
-    public IEnumerator HealthBarTest()
-    {
-        GameObject bar = GameObject.Find("HealthBar");
-        if (bar == null) { Assert.Fail("HealthBar GameObject not found in the scene."); yield break; }
- 
-        Component slider = bar.GetComponent("Slider");
-        if (slider == null) { Assert.Fail("HealthBar has no Slider component."); yield break; }
- 
-        if (bar.GetComponentInParent<Canvas>() == null) { Assert.Fail("HealthBar is not inside a Canvas."); yield break; }
-        if (!AnchoredTopLeft(bar)) { Assert.Fail("HealthBar is not anchored to the top-left of the screen."); yield break; }
- 
-        PropertyInfo valueProperty = slider.GetType().GetProperty("value");
-        Func<float> readBar = () => Convert.ToSingle(valueProperty.GetValue(slider));
- 
-        GameObject player = GameObject.Find("Player");
-        if (player == null) { Assert.Fail("Player GameObject not found in the scene."); yield break; }
- 
-        Component mover = player.GetComponent("PlayerMover");
-        if (mover == null) { Assert.Fail("PlayerMover component not found on Player GameObject."); yield break; }
- 
-        MethodInfo move = mover.GetType().GetMethod("Move", new[] { typeof(Vector2) });
-        if (move == null) { Assert.Fail("Move(Vector2) method not found in PlayerMover component."); yield break; }
- 
-        Component healthComp = FindHealthComponent(player);
-        if (healthComp == null) { Assert.Fail("Health field or property not found in Player components."); yield break; }
-        Func<float> readHealth = ReadHealthFrom(healthComp);
- 
-        // 1. The bar starts in sync with the Player's health.
-        yield return null;
-        yield return null;
-        Assert.AreEqual(readHealth(), readBar(), 0.01f, "HealthBar does not show the Player's starting health.");
- 
-        // 2. Damage the Player on the Wall, the same way as HealthComponentTest.
-        float startHealth = readHealth();
-        DisablePlayerScripts(player, keepAlive: healthComp);
-        for (int i = 0; i < 100; i++)
-        {
-            yield return new WaitForFixedUpdate();
-            move.Invoke(mover, new object[] { Vector2.right });
-            if (readHealth() < startHealth) { break; }
-        }
-        if (readHealth() >= startHealth) { Assert.Fail("Could not damage the Player on the Wall; HealthBar tracking untested."); yield break; }
- 
-        // Stop the Player so it doesn't keep hitting the Wall, then let the HUD update.
-        Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
-        if (rb != null) { rb.linearVelocity = Vector2.zero; }
-        for (int i = 0; i < 5; i++)
-        {
-            yield return null;
-        }
- 
-        // 3. The bar now shows the new health.
-        Assert.AreEqual(readHealth(), readBar(), 0.01f, "HealthBar did not update when the Player took damage.");
+        Assert.IsTrue(winCondition(), "Player did not win after defeating the Enemy, opening the Door and reaching the Goal.");
     }
 }

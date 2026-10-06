@@ -3,16 +3,32 @@ using System.Collections;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace MultiAgentBridge
 {
     public class PlayTestHelpers
     {
+        const BindingFlags Members = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
         public static GameObject FindOrFail(string name)
         {
             GameObject go = GameObject.Find(name);
             if (go == null) { Assert.Fail($"{name} GameObject not found in the scene."); }
             return go;
+        }
+
+        // GameObject.Find skips inactive objects, so a closed UI panel would never be found.
+        public static GameObject FindIncludingInactive(string name)
+        {
+            foreach (GameObject root in SceneManager.GetActiveScene().GetRootGameObjects())
+            {
+                foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                {
+                    if (t.name == name) { return t.gameObject; }
+                }
+            }
+            return null;
         }
 
         public static Component ComponentOrFail(GameObject go, string type)
@@ -32,13 +48,41 @@ namespace MultiAgentBridge
         public static Func<bool> GetWinCondition(Component component)
         {
             var type = component.GetType();
-            var field = type.GetField("winCondition", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var field = type.GetField("winCondition", Members);
             if (field != null) { return () => (bool)field.GetValue(component); }
 
-            var property = type.GetProperty("winCondition", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var property = type.GetProperty("winCondition", Members);
             if (property != null) { return () => (bool)property.GetValue(component); }
 
             return null;
+        }
+
+        // Returns the first component on the GameObject with a field or property of this name.
+        public static Component FindComponentWithMember(GameObject go, string name)
+        {
+            foreach (Component c in go.GetComponents<Component>())
+            {
+                if (c == null) { continue; }
+                Type type = c.GetType();
+                if (type.GetField(name, Members) != null || type.GetProperty(name, Members) != null) { return c; }
+            }
+            return null;
+        }
+
+        public static bool ReadBool(Component c, string name)
+        {
+            FieldInfo field = c.GetType().GetField(name, Members);
+            if (field != null) { return Convert.ToBoolean(field.GetValue(c)); }
+            PropertyInfo property = c.GetType().GetProperty(name, Members);
+            return Convert.ToBoolean(property.GetValue(c));
+        }
+
+        public static void WriteBool(Component c, string name, bool value)
+        {
+            FieldInfo field = c.GetType().GetField(name, Members);
+            if (field != null) { field.SetValue(c, value); return; }
+            PropertyInfo property = c.GetType().GetProperty(name, Members);
+            property.SetValue(c, value);
         }
 
         // Disables every MonoBehaviour on the Player except keepAlive (pass null to disable all).
@@ -51,15 +95,15 @@ namespace MultiAgentBridge
             }
         }
 
-        // Returns the Player component that owns a `health` field/property, so the caller can keep it
-        // enabled while disabling the rest.
+        // Returns the Player component that owns a `health` field/property.
         public static Component FindHealthComponent(GameObject player)
         {
             foreach (Component component in player.GetComponents<Component>())
             {
+                if (component == null) { continue; }
                 Type type = component.GetType();
-                if (type.GetField("health", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) != null) { return component; }
-                if (type.GetProperty("health", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) != null) { return component; }
+                if (type.GetField("health", Members) != null) { return component; }
+                if (type.GetProperty("health", Members) != null) { return component; }
                 if (GetHealthMethod(type) != null) { return component; }
             }
             return null;
@@ -69,7 +113,7 @@ namespace MultiAgentBridge
         {
             foreach (string name in new[] { "GetHealth", "Health", "GetCurrentHealth" })
             {
-                MethodInfo m = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+                MethodInfo m = type.GetMethod(name, Members, null, Type.EmptyTypes, null);
                 if (m != null && (m.ReturnType == typeof(int) || m.ReturnType == typeof(float))) { return m; }
             }
             return null;
@@ -78,10 +122,10 @@ namespace MultiAgentBridge
         public static Func<float> ReadHealthFrom(Component component)
         {
             Type type = component.GetType();
-            FieldInfo field = type.GetField("health", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            FieldInfo field = type.GetField("health", Members);
             if (field != null) { return () => Convert.ToSingle(field.GetValue(component)); }
 
-            PropertyInfo property = type.GetProperty("health", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            PropertyInfo property = type.GetProperty("health", Members);
             if (property != null) { return () => Convert.ToSingle(property.GetValue(component)); }
 
             MethodInfo method = GetHealthMethod(type);
@@ -90,17 +134,31 @@ namespace MultiAgentBridge
             return null;
         }
 
+        // Returns the first non-empty `text` shown under a UI panel. Works for Unity's Text and TextMeshPro.
+        public static string ReadText(GameObject panel)
+        {
+            foreach (Component c in panel.GetComponentsInChildren<Component>())
+            {
+                if (c == null) { continue; }
+                PropertyInfo text = c.GetType().GetProperty("text", BindingFlags.Instance | BindingFlags.Public);
+                if (text != null && text.PropertyType == typeof(string))
+                {
+                    string value = (string)text.GetValue(c);
+                    if (!string.IsNullOrEmpty(value)) { return value; }
+                }
+            }
+            return "";
+        }
+
         public static IEnumerator PlayerMoveHelper(GameObject player, Component mover, MethodInfo move,
                                     Vector2 direction, string label)
         {
-            // Trying to isolate Move by disabling the MonoBehaviour of the player.
-            // Some agent implementations zero velocity when no key is pressed meaning we cannot invoke via reflection and read cleanly.
-            foreach (var mb in player.GetComponents<MonoBehaviour>())
-                mb.enabled = false;
-            
+            // Disable every Player script, so input code that zeroes velocity cannot cancel Move.
+            DisablePlayerScripts(player, keepAlive: null);
+
             Vector3 start = player.transform.position;
 
-            for (int i = 0; i< 50; i++)
+            for (int i = 0; i < 50; i++)
             {
                 move.Invoke(mover, new object[] { direction });
                 yield return new WaitForFixedUpdate();
@@ -112,13 +170,24 @@ namespace MultiAgentBridge
             Assert.Greater(Vector2.Dot(finalMoved, direction), 0.1f,
             $"Move ({label}) did not move the Player in the {label} direction.");
         }
-    
+
         // Destroyed or deactivated.
         public static bool IsGone(GameObject go)
         {
             return go == null || !go.activeInHierarchy;
         }
-    
+
+        // The Door is open if it is gone or no longer has an enabled, solid collider.
+        public static bool DoorIsOpen(GameObject door)
+        {
+            if (IsGone(door)) { return true; }
+            foreach (Collider2D c in door.GetComponents<Collider2D>())
+            {
+                if (c.enabled && !c.isTrigger) { return false; }
+            }
+            return true;
+        }
+
         // Moves the Player instantly and stops it.
         public static void Teleport(GameObject player, Vector3 position)
         {
@@ -130,7 +199,17 @@ namespace MultiAgentBridge
                 rb.linearVelocity = Vector2.zero;
             }
         }
-    
+
+        // Keeps the Player at a position for a number of physics frames.
+        public static IEnumerator HoldPlayerAt(GameObject player, Vector3 position, int frames)
+        {
+            for (int i = 0; i < frames; i++)
+            {
+                Teleport(player, position);
+                yield return new WaitForFixedUpdate();
+            }
+        }
+
         // TakeDamage(int) as specified; TakeDamage(float) accepted too.
         public static MethodInfo GetTakeDamage(Type type)
         {
@@ -138,14 +217,14 @@ namespace MultiAgentBridge
             if (method == null) { method = type.GetMethod("TakeDamage", new[] { typeof(float) }); }
             return method;
         }
-    
+
         public static void InvokeTakeDamage(MethodInfo takeDamage, Component enemy, int amount)
         {
             object argument = amount;
             if (takeDamage.GetParameters()[0].ParameterType == typeof(float)) { argument = (float)amount; }
             takeDamage.Invoke(enemy, new[] { argument });
         }
-    
+
         // True if HealthBar, or a UI parent of it below the Canvas, uses the top-left anchor preset.
         public static bool AnchoredTopLeft(GameObject bar)
         {
