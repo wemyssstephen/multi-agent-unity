@@ -9,7 +9,6 @@ using UnityEngine.SceneManagement;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEditor.Compilation;
-using Unity.VisualScripting;
 
 namespace MultiAgentBridge
 {
@@ -33,6 +32,7 @@ namespace MultiAgentBridge
             toolHandlers["assign_sprite"] = AssignSprite;
             toolHandlers["list_sprites"] = ListSprites;
             toolHandlers["set_property"] = SetProperty;
+            toolHandlers["set_parent"] = SetParent;
             toolHandlers["create_primitive"] = CreatePrimitive;
             toolHandlers["read_scene"] = ReadScene;
             toolHandlers["read_script"] = ReadScript;
@@ -268,6 +268,11 @@ namespace MultiAgentBridge
                     return $"Failed to find property {objectParams.PropertyPath} on component {objectParams.ComponentType}";
                 }
 
+                if (objectParams.PropertyPath == "m_Father" || objectParams.PropertyPath == "m_Children")
+                {
+                    return "Parenting cannot be set as a property. Use the set_parent tool instead.";
+                }
+
                 if (!ApplyValueToCorrectProperty(property, objectParams, out var applyError)) { return applyError; }
                 serializedComponent.ApplyModifiedProperties();
                 if (!TrySaveScene()) { return "Failed to save scene"; }
@@ -275,6 +280,17 @@ namespace MultiAgentBridge
             catch (Exception e) { return $"Failed to set property: {e.Message}";}
 
             return $"Set property {objectParams.PropertyPath} of component {objectParams.ComponentType} on GameObject {gameObject.name} to {objectParams.Value}";
+        }
+
+        private static string SetParent(JObject args)
+        {
+            var p = args.ToObject<SetParentParams>();
+            if (!TryResolveGameObject(p.ChildId, out var child, out var error)) { return error; }
+            if (!TryResolveGameObject(p.ParentId, out var parent, out error)) { return error; }
+
+            child.transform.SetParent(parent.transform, false);
+            if (!TrySaveScene()) { return "Failed to save scene"; }
+            return $"Set parent of {child.name} to {parent.name}";
         }
 
         private static string CreatePrimitive(JObject args)
