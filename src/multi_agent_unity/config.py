@@ -41,8 +41,8 @@ class AnthropicAPI:
     endpoint = "https://api.anthropic.com/v1/messages"
     version = "2023-06-01"
 
-    max_tokens = 8192
-    timeout = 300
+    max_tokens = 32000
+    timeout = 600
     retries = 5
     RETRYABLE = {429, 500, 502, 503, 529}
 
