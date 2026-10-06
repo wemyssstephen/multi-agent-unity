@@ -108,6 +108,18 @@ def set_property(game_object_id: str,
     return post_with_compile_retry(payload=payload)
 
 @mcp.tool()
+def set_parent(child_id: str, parent_id: str) -> str:
+    """Makes one GameObject the child of another."""
+    payload =   {
+                    "Name": "set_parent",
+                    "Args": {
+                        "ChildId": child_id,
+                        "ParentId": parent_id
+                    }
+                }
+    return post(payload=payload)
+
+@mcp.tool()
 def create_primitive(object_name: str, primitive_name: str) -> str:
     """Creates a primitive shape (Cube, Sphere, Cylinder, Capsule, Plane, Quad) with the given name"""
     payload =   {
