@@ -10,3 +10,6 @@ class BridgeUnreachable(BridgeTimeout):
 
 class UnityStartupError(Exception):
     """A freshly launched Unity never answered on the bridge."""
+
+class ResponseTruncated(Exception):
+    """An API response hit max_tokens and was cut off mid turn."""
