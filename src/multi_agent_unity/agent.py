@@ -7,6 +7,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 
 import multi_agent_unity.anthropic_api_manager as anthropic_api_manager
 from multi_agent_unity.agent_classes import Agent, OrchestratorAgent, SingleAgent
+from multi_agent_unity.exceptions import BridgeTimeout, ResponseTruncated
 
 server_params = StdioServerParameters(
     command=sys.executable,
@@ -68,8 +69,17 @@ async def agent_loop_handler(task: str, system_flag, model, iteration_budget, se
         agent = agent_types[system_flag].make(model, anthropic_tools)
         log.info("Running %s agent loop...", agent.name)
         budget = Budget(iteration_budget)
-        result = await run_agent(task, agent, mcp, sender, budget)
-        return {"text": result, **budget.summary()}
+
+        try:
+            result = await run_agent(task, agent, mcp, sender, budget)
+        except BridgeTimeout as e:
+            failure = e
+        else:
+            failure = None
+
+    if failure is not None:
+        raise failure
+    return {"text": result, **budget.summary()}
 
 
 async def run_agent(task: str, agent: Agent, mcp, sender, budget: Budget) -> str:
@@ -80,6 +90,9 @@ async def run_agent(task: str, agent: Agent, mcp, sender, budget: Budget) -> str
         headers, body = anthropic_api_manager.build_request_payload(messages, tools=agent.tools, model=agent.model, system=agent.system_prompt)
         response = sender(headers, body)
         budget.record_usage(anthropic_api_manager.get_usage(response))
+
+        if anthropic_api_manager.get_stop_reason(response) == "max_tokens":
+            raise ResponseTruncated(f"{agent.name} response hit max_tokens")
 
         if anthropic_api_manager.get_stop_reason(response) != "tool_use":
             return anthropic_api_manager.get_text(response)
@@ -98,6 +111,8 @@ async def run_agent(task: str, agent: Agent, mcp, sender, budget: Budget) -> str
             else:
                 result = await mcp.call_tool(call["name"], call["input"])
                 result_text = result.content[0].text
+                if result.is_error:
+                    raise BridgeTimeout(f"{call["name"]} could not run: {result_text}")
                 log.info("%s tool %s -> %s", agent.name, call["name"], result_text[:120])
             tool_results.append(anthropic_api_manager.build_tool_result(call["tool_use_id"], result_text))
         messages.append({"role": "user", "content": tool_results})
