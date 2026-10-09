@@ -154,7 +154,7 @@ class Bench:
             return self._record(scene, system, rep, compiled=True, reason="test_timeout")
         except Exception as e:
             log.exception("Error - moving to next rep: scene=%s, system=%s, rep=%s", scene, system, rep)
-            # Agent errors arrive wrapped by the MCP client. Extract and record the real error.
+            # Agent errors arrive wrapped by the MCP server. Extract and record the real error.
             while isinstance(e, BaseExceptionGroup):
                 e = e.exceptions[0]
             return self._record(scene, system, rep, reason=type(e).__name__)

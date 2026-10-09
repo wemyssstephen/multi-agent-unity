@@ -65,13 +65,13 @@ CYAN, YELLOW, RESET = "\033[96m", "\033[93m", "\033[0m"
 
 
 def print_banner():
+    """Prints the ASCII banner to the console, with colours."""
     os.system("")
     print(CYAN + TITLE + RESET)
     print(YELLOW + DIAGRAM + RESET)
 
-# ---------- Prompts ----------
-
 def ask_choice(question: str, options: dict) -> tuple:
+    """Asks user a multiple choice question, returns the chosen (label, value) tuple."""
     print(f"\n{question}")
     for key, (label, _) in options.items():
         print(f"  {key}) {label}")
@@ -82,6 +82,7 @@ def ask_choice(question: str, options: dict) -> tuple:
         print("  Please choose one of the numbers above.")
 
 def ask_int(question: str, default: int, low: int, high: int) -> int:
+    """Asks user for an integer in a range, returns the chosen value."""
     while True:
         answer = input(f"\n{question} [{default}]\n> ").strip()
         if not answer:
@@ -91,11 +92,10 @@ def ask_int(question: str, default: int, low: int, high: int) -> int:
         print(f"  Please enter a whole number from {low} to {high}.")
 
 def ask_yes_no(question: str, default: bool = True) -> bool:
+    """Asks user a yes/no question, returns True for yes, False for no."""
     hint = "Y/n" if default else "y/N"
     answer = input(f"\n{question} [{hint}]\n> ").strip().lower()
     return default if not answer else answer.startswith("y")
-
-# ---------- Actions ----------
 
 def configure_bench() -> Bench | None:
     """Asks for the batch settings, shows a summary, and returns a ready Bench (or None if cancelled)."""
@@ -125,6 +125,7 @@ def configure_bench() -> Bench | None:
     return bench if ask_yes_no("Start this batch?") else None
 
 def run_benchmark():
+    """Runs the benchmark, and optionally analyses the results afterwards."""
     bench = configure_bench()
     if bench is None:
         print("Cancelled.")
@@ -144,7 +145,7 @@ def analyse_results():
     _, chosen = ask_choice("Which results file? (newest first)", options)
     print(f"Report written to {write_report([chosen])}")
 
-# ---------- Loop ----------
+# Main loop
 
 MENU = {
     "1": ("Run the benchmark", run_benchmark),
