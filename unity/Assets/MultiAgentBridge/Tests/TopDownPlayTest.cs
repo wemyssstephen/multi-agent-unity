@@ -79,6 +79,18 @@ public class TopDownPlayTest
             yield return new WaitForFixedUpdate();
         }
 
+        // If nothing moved, try again with scripts enabled.
+        if (player.transform.position.x >= playerStart.x)
+        {
+            Teleport(player, playerStart);
+            EnablePlayerScripts(player);
+            for (int i = 0; i < 100; i++)
+            {
+                move.Invoke(mover, new object[] { Vector2.left });
+                yield return new WaitForFixedUpdate();
+            }
+        }
+
         Vector3 playerEnd = player.transform.position;
         Assert.Less(playerEnd.x, playerStart.x, "Player did not move toward the Wall. Move produced no motion.");
         Assert.Greater(playerEnd.x, wallPosition.x, "Player passed through the Wall, collision detection failed.");
@@ -114,7 +126,6 @@ public class TopDownPlayTest
         Func<float> readHealth = ReadHealthFrom(healthComp);
         float startHealth = readHealth();
 
-        // Hold the Player on the Enemy until contact registers
         for (int i = 0; i < 100; i++)
         {
             if (IsGone(enemy)) { break; }
@@ -176,10 +187,8 @@ public class TopDownPlayTest
         if (healthComp == null) { Assert.Fail("Health field or property not found in Player components."); }
         Func<float> readHealth = ReadHealthFrom(healthComp);
 
-        // 1. The bar starts in sync with the Player's health.
         Assert.AreEqual(readHealth(), readBar(), 0.01f, "HealthBar does not show the Player's starting health.");
 
-        // 2. Damage the Player on the Enemy, the same way as EnemyContactTest.
         Vector3 away = player.transform.position;
         float startHealth = readHealth();
         for (int i = 0; i < 100; i++)
@@ -191,14 +200,12 @@ public class TopDownPlayTest
         }
         if (readHealth() >= startHealth) { Assert.Fail("Could not damage the Player on the Enemy; HealthBar tracking untested."); }
 
-        // Move the Player away so it takes no more damage, then let the HUD update.
         yield return HoldPlayerAt(player, away, 5);
         for (int i = 0; i < 5; i++)
         {
             yield return null;
         }
 
-        // 3. The bar now shows the new health.
         Assert.AreEqual(readHealth(), readBar(), 0.01f, "HealthBar did not update when the Player took damage.");
     }
 
@@ -273,7 +280,7 @@ public class TopDownPlayTest
         }
         if (!ReadBool(dialogueOwner, "dialogueFinished")) { Assert.Fail("Could not finish the NPC dialogue; quest untested."); }
 
-        // Defeat the Enemy directly, independent of Attack.
+        // Defeat the Enemy directly
         InvokeTakeDamage(takeDamage, enemyComp, 9999);
         for (int i = 0; i < 10 && !IsGone(enemy); i++)
         {
@@ -310,7 +317,34 @@ public class TopDownPlayTest
         yield return HoldPlayerAt(player, doorPos, 25);
         Assert.IsFalse(DoorIsOpen(door), "Door opened without the key.");
 
-        // With the key, touching the Door opens it. Step away first so contact starts afresh.
+        // Check the Door collider actually works
+        Component mover = ComponentOrFail(player, "PlayerMover");
+        MethodInfo move = MethodOrFail(mover, "Move", typeof(Vector2));
+        yield return HoldPlayerAt(player, beforeDoor, 5);
+        DisablePlayerScripts(player, keepAlive: null);
+        for (int i = 0; i < 100; i++)
+        {
+            move.Invoke(mover, new object[] { Vector2.right });
+            yield return new WaitForFixedUpdate();
+        }
+
+        // If nothing moved, Move may only store input for FixedUpdate to apply, so try again with scripts enabled.
+        if (player.transform.position.x <= beforeDoor.x)
+        {
+            Teleport(player, beforeDoor);
+            EnablePlayerScripts(player);
+            for (int i = 0; i < 100; i++)
+            {
+                move.Invoke(mover, new object[] { Vector2.right });
+                yield return new WaitForFixedUpdate();
+            }
+        }
+
+        Assert.Less(player.transform.position.x, doorPos.x, "Player passed through the closed Door.");
+        move.Invoke(mover, new object[] { Vector2.zero });
+        EnablePlayerScripts(player);
+
+        // Check the door opens with a key
         WriteBool(keyOwner, "hasKey", true);
         yield return HoldPlayerAt(player, beforeDoor, 5);
         for (int i = 0; i < 50 && !DoorIsOpen(door); i++)
@@ -345,12 +379,12 @@ public class TopDownPlayTest
         Vector3 away = player.transform.position;
         Vector3 goalPos = goal.transform.position;
 
-        // Reaching the Goal with the Enemy alive and the Door closed must NOT win.
+        // Reaching the Goal with the Enemy alive and the Door closed does not win.
         yield return HoldPlayerAt(player, goalPos, 20);
         Assert.IsFalse(winCondition(), "Win triggered while the Enemy was alive and the Door closed.");
         yield return HoldPlayerAt(player, away, 5);
 
-        // Defeat the Enemy directly. With the Door still closed, the Goal must still NOT win.
+        // Enemy dead but door closed does not win.
         InvokeTakeDamage(takeDamage, enemyComp, 9999);
         for (int i = 0; i < 10 && !IsGone(enemy); i++)
         {

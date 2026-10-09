@@ -99,6 +99,18 @@ public class SideScrollerPlayTest
             yield return new WaitForFixedUpdate();
         }
 
+        // If nothing moved, try again with scripts enabled.
+        if (player.transform.position.x >= playerStart.x)
+        {
+            Teleport(player, playerStart);
+            EnablePlayerScripts(player);
+            for (int i = 0; i < 100; i++)
+            {
+                move.Invoke(mover, new object[] { Vector2.left });
+                yield return new WaitForFixedUpdate();
+            }
+        }
+
         Vector3 playerEnd = player.transform.position;
         Assert.Less(playerEnd.x, playerStart.x, "Player did not move toward the Wall. Move produced no motion.");
         Assert.Greater(playerEnd.x, wallPosition.x, "Player passed through the Wall, collision detection failed.");
@@ -111,14 +123,17 @@ public class SideScrollerPlayTest
 
         Vector2 start = enemy.transform.position;
         float furthest = 0f;
+        float lowest = start.y;
         for (int i = 0; i < 150; i++)
         {
             yield return new WaitForFixedUpdate();
             if (IsGone(enemy)) { break; }
             Vector2 now = enemy.transform.position;
-            furthest = Mathf.Max(furthest, Vector2.Distance(start, now));
+            furthest = Mathf.Max(furthest, Mathf.Abs(now.x - start.x));
+            lowest = Mathf.Min(lowest, now.y);
         }
 
+        Assert.Less(start.y - lowest, 1f, "Enemy fell out of the level instead of patrolling.");
         Assert.Greater(furthest, 0.5f, "Enemy did not patrol.");
     }
 
@@ -228,10 +243,11 @@ public class SideScrollerPlayTest
         Component dialogueOwner = FindComponentWithMember(npc, "dialogueFinished");
         if (dialogueOwner == null) { Assert.Fail("dialogueFinished field not found on the NPC."); }
 
+        // A closed dialogue panel is usually inactive, so search inactive objects too.
         GameObject box = FindIncludingInactive("DialogueBox");
         if (box == null) { Assert.Fail("DialogueBox not found in the scene."); }
 
-        // 1. Stand beside the NPC and talk to it.
+        // Stand beside the NPC and talk to it.
         Vector3 besideNpc = npc.transform.position + Vector3.left;
         yield return HoldPlayerAt(player, besideNpc, 10);
         interact.Invoke(npcComp, null);
@@ -294,7 +310,7 @@ public class SideScrollerPlayTest
         }
         if (!IsGone(enemy)) { Assert.Fail("Could not destroy the Enemy; quest untested."); }
 
-        // Return to the NPC. Interact, then advance any reward dialogue, until the key is given.
+        // Return to the NPC. Interact until the key is given.
         yield return HoldPlayerAt(player, besideNpc, 5);
         interact.Invoke(npcComp, null);
         yield return HoldPlayerAt(player, besideNpc, 5);
@@ -323,7 +339,34 @@ public class SideScrollerPlayTest
         yield return HoldPlayerAt(player, doorPos, 25);
         Assert.IsFalse(DoorIsOpen(door), "Door opened without the key.");
 
-        // With the key, touching the Door opens it. Step away first so contact starts afresh.
+        // Check the Door collider actually works
+        Component mover = ComponentOrFail(player, "PlayerMover");
+        MethodInfo move = MethodOrFail(mover, "Move", typeof(Vector2));
+        yield return HoldPlayerAt(player, beforeDoor, 5);
+        DisablePlayerScripts(player, keepAlive: null);
+        for (int i = 0; i < 100; i++)
+        {
+            move.Invoke(mover, new object[] { Vector2.right });
+            yield return new WaitForFixedUpdate();
+        }
+
+        // If nothing moved, Move may only store input for FixedUpdate to apply, so try again with scripts enabled.
+        if (player.transform.position.x <= beforeDoor.x)
+        {
+            Teleport(player, beforeDoor);
+            EnablePlayerScripts(player);
+            for (int i = 0; i < 100; i++)
+            {
+                move.Invoke(mover, new object[] { Vector2.right });
+                yield return new WaitForFixedUpdate();
+            }
+        }
+
+        Assert.Less(player.transform.position.x, doorPos.x, "Player passed through the closed Door.");
+        move.Invoke(mover, new object[] { Vector2.zero });
+        EnablePlayerScripts(player);
+
+        // Check the door opens with a key
         WriteBool(keyOwner, "hasKey", true);
         yield return HoldPlayerAt(player, beforeDoor, 5);
         for (int i = 0; i < 50 && !DoorIsOpen(door); i++)
@@ -358,12 +401,12 @@ public class SideScrollerPlayTest
         Vector3 away = player.transform.position;
         Vector3 goalPos = goal.transform.position;
 
-        // Reaching the Goal with the Enemy alive and the Door closed must NOT win.
+        // Reaching the Goal with the Enemy alive and the Door closed does not win.
         yield return HoldPlayerAt(player, goalPos, 20);
         Assert.IsFalse(winCondition(), "Win triggered while the Enemy was alive and the Door closed.");
         yield return HoldPlayerAt(player, away, 5);
 
-        // Defeat the Enemy directly. With the Door still closed, the Goal must still NOT win.
+        // Enemy dead but door closed does not win.
         InvokeTakeDamage(takeDamage, enemyComp, 9999);
         for (int i = 0; i < 10 && !IsGone(enemy); i++)
         {

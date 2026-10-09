@@ -85,13 +85,22 @@ namespace MultiAgentBridge
             property.SetValue(c, value);
         }
 
-        // Disables every MonoBehaviour on the Player except keepAlive (pass null to disable all).
+        // Disables every MonoBehaviour on the Player except keepAlive.
         public static void DisablePlayerScripts(GameObject player, Component keepAlive)
         {
             foreach (MonoBehaviour mb in player.GetComponents<MonoBehaviour>())
             {
                 if (mb == keepAlive) { continue; }
                 mb.enabled = false;
+            }
+        }
+
+        // Re-enables every MonoBehaviour on the Player.
+        public static void EnablePlayerScripts(GameObject player)
+        {
+            foreach (MonoBehaviour mb in player.GetComponents<MonoBehaviour>())
+            {
+                mb.enabled = true;
             }
         }
 
@@ -134,7 +143,7 @@ namespace MultiAgentBridge
             return null;
         }
 
-        // Returns the first non-empty `text` shown under a UI panel. Works for Unity's Text and TextMeshPro.
+        // Returns the first non-empty `text` shown under a UI panel.
         public static string ReadText(GameObject panel)
         {
             foreach (Component c in panel.GetComponentsInChildren<Component>())
@@ -153,11 +162,21 @@ namespace MultiAgentBridge
         public static IEnumerator PlayerMoveHelper(GameObject player, Component mover, MethodInfo move,
                                     Vector2 direction, string label)
         {
-            // Disable every Player script, so input code that zeroes velocity cannot cancel Move.
-            DisablePlayerScripts(player, keepAlive: null);
-
             Vector3 start = player.transform.position;
 
+            // First try with every Player script disabled, so input code cannot cancel Move.
+            DisablePlayerScripts(player, keepAlive: null);
+            for (int i = 0; i < 50; i++)
+            {
+                move.Invoke(mover, new object[] { direction });
+                yield return new WaitForFixedUpdate();
+                Vector2 moved = player.transform.position - start;
+                if (Vector2.Dot(moved, direction) > 0.1f) yield break;
+            }
+
+            // If nothing moved, Move may only store input for FixedUpdate to apply, so try again with scripts enabled.
+            Teleport(player, start);
+            EnablePlayerScripts(player);
             for (int i = 0; i < 50; i++)
             {
                 move.Invoke(mover, new object[] { direction });
