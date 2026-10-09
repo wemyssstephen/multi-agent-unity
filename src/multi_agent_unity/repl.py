@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 from multi_agent_unity.analyse import write_report
 from multi_agent_unity.bench import Bench

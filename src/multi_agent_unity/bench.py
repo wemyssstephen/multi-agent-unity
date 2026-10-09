@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from itertools import product
 
+from multi_agent_unity import repl_messages
 from multi_agent_unity.agent import agent_loop_handler
 from multi_agent_unity.config import BenchPaths, Bridge
 from multi_agent_unity.exceptions import BridgeTimeout, TestPollTimeout, UnityStartupError
@@ -14,7 +15,6 @@ from multi_agent_unity.scene_manager import prepare_scene, save_scene
 from multi_agent_unity.tasks import get_task, get_tests
 from multi_agent_unity.test_manager import await_tests, run_tests
 from multi_agent_unity.unity_manager import launch_unity_headless, quit_unity, request_compile, wait_for_compile, wait_for_unity
-from multi_agent_unity import repl_messages
 
 log = logging.getLogger("bench")
 
@@ -78,7 +78,7 @@ class Bench:
         setup_logging(console_level=self.console_level, logfile=self.log_path)
         self.results_path.parent.mkdir(parents=True, exist_ok=True)
         cells = list(product(self.runs, self.systems, range(self.reps)))
-        
+
         repl_messages.message(f"Beginning benchmark... {len(cells)} runs with {self.model}")
         self.unity_process = self._start_unity()
         repl_messages.message("Unity running...")

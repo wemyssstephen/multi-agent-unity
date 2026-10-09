@@ -29,18 +29,15 @@ def load_runs(files):
                 runs.append(run)
     return runs
 
-
 def pass_at_k(n, c, k):
     """Chance at least one of k runs passes, given c passes out of n."""
     if n - c < k:
         return 1.0
     return 1 - comb(n - c, k) / comb(n, k)
 
-
 def pass_hat_k(n, c, k):
     """Chance all k runs pass, given c passes out of n."""
     return comb(c, k) / comb(n, k)
-
 
 def cost(run):
     total = 0
@@ -48,16 +45,13 @@ def cost(run):
         total += run.get(field, 0) * price
     return total / 1_000_000
 
-
 def mean_and_sd(values):
     if len(values) < 2:
         return f"{values[0]:.2f}" if values else "-"
     return f"{statistics.mean(values):.2f} ± {statistics.stdev(values):.2f}"
 
-
 def count(counts, key):
     counts[key] = counts.get(key, 0) + 1
-
 
 # ---------- Tables ----------
 
@@ -81,7 +75,6 @@ def capability_table(runs):
             rows.append(row)
     return headers, rows
 
-
 def test_table(runs):
     passed = {}
     total = {}
@@ -102,7 +95,6 @@ def test_table(runs):
         rows.append(row)
     return headers, rows
 
-
 def cost_table(runs):
     headers = ["System", "n", "Cost (USD)", "Model calls", "Tool calls",
                "Output tokens", "Hit call limit"]
@@ -122,7 +114,6 @@ def cost_table(runs):
         ])
     return headers, rows
 
-
 def failure_table(runs, errors):
     counts = {}
     for run in errors:
@@ -138,7 +129,6 @@ def failure_table(runs, errors):
     rows = [[system, failure, detail, n] for (system, failure, detail), n in sorted(counts.items())]
     return headers, rows
 
-
 # ---------- Output ----------
 
 def save_table(folder, name, headers, rows):
@@ -149,7 +139,6 @@ def save_table(folder, name, headers, rows):
         writer = csv.writer(file)
         writer.writerow(headers)
         writer.writerows(rows)
-
 
 def write_report(files):
     """Analyses the runs files and saves each table as a CSV. Returns the output folder."""
@@ -166,17 +155,7 @@ def write_report(files):
     save_table(folder, "tests", *test_table(runs))
     save_table(folder, "cost", *cost_table(runs))
     save_table(folder, "failures", *failure_table(runs, errors))
-
-    print("\nArtefacts for hand-scoring")
-    for system in SYSTEMS:
-        passing = [run for run in runs if run["system"] == system and run["passed"]]
-        if passing:
-            run = passing[0]
-            artefacts = run["batch"].parent / run["batch"].stem.replace("runs_", "artefacts_")
-            print(f"{SYSTEMS[system]}: {artefacts / run['scene'] / system / ('rep' + str(run['rep']))}")
-
     return folder
-
 
 if __name__ == "__main__":
     print(f"\nTables saved to {write_report(sys.argv[1:])}")
