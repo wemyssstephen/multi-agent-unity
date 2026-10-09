@@ -44,3 +44,9 @@ Thumbs.db
 !/unity/Packages/
 /unity/Packages/*
 !/unity/Packages/manifest.json
+src/multi_agent_unity/add_durations.py
+src/multi_agent_unity/stress_reload.py
+src/multi_agent_unity/stress_cycle.py
+src/multi_agent_unity/verify_wedge.py
+src/multi_agent_unity/rescore.py
+src/multi_agent_unity/plots.py
