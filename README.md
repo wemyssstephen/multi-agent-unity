@@ -1,6 +1,6 @@
 # Evaluating Multi-Agent Systems in Video Game Development
 
-A benchmark that compares a multi-agent LLM system with a single-agent baseline on game development tasks inside a live Unity Editor. Built for my MSc Computer Science final project at Birkbeck, University of London.
+A benchmark that compares a multi-agent LLM system with a single-agent baseline on game development tasks inside a live Unity Editor. Built for my MSc Computer Science final project at University of London.
 
 Both systems use the same model, task prompt and tools, so agent architecture is the only variable. Each run starts from a clean scene, the agents build a small 2D game through a set of Unity tools, and hidden PlayMode tests decide whether the game works.
 
